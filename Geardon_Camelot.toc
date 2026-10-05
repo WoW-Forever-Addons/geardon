@@ -1,0 +1,31 @@
+## Interface: 16001
+## Title: |cff3fa9f5Gear|rdon
+## Notes: Item level for WoW Forever: on every slot of the character and inspect frame, on bags, bank, loot and quest rewards with an upgrade arrow, in item and player tooltips and for your whole group.
+## Notes-deDE: Gegenstandsstufe für WoW Forever: an jedem Platz im Charakter- und Betrachten-Fenster, auf Taschen, Bank, Beute und Questbelohnungen mit Pfeil für Verbesserungen, in Gegenstands- und Spieler-Tooltips und für deine ganze Gruppe.
+## Author: DonCoohd
+## Version: 1.0.0
+## X-Curse-Project-ID: 1727778
+## Category: Inventory
+## Category-deDE: Inventar
+## IconTexture: Interface\Icons\INV_Chest_Plate06
+## SavedVariables: GeardonDB
+## AddonCompartmentFunc: Geardon_OnAddonCompartmentClick
+## X-License: MIT License, Copyright (c) 2026 DonCoohd
+
+Locales\enUS.lua
+Locales\deDE.lua
+Core.lua
+Style.lua
+SettingsUI.lua
+ItemLevel.lua
+Overlay.lua
+Character.lua
+Inspect.lua
+Bags.lua
+Loot.lua
+Flyout.lua
+Tooltip.lua
+Group.lua
+GroupWindow.lua
+Diag.lua
+Options.lua
