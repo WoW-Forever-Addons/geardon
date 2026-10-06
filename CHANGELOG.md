@@ -1,5 +1,10 @@
 # Changes
 
+## 1.1.0
+
+- **Translations:** French, Spanish (Spain and Latin America), Brazilian Portuguese, Russian, Korean and Traditional Chinese.
+- **Decimal sign:** item level averages use the decimal sign of your game language.
+
 ## 1.0.0
 
 First release.
