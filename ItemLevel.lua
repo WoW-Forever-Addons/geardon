@@ -329,9 +329,11 @@ function ns.IsUpgrade(info)
   return diff ~= nil and diff > 0 and not replaces2H
 end
 
--- Decimal comma in the German client.
+-- Decimal separator of the client (Blizzard's DECIMAL_SEPERATOR: comma in deDE, frFR, esES, ptBR, ruRU).
 local function Decimal(s)
-  if ns.Value(GetLocale) == "deDE" then return (s:gsub("%.", ",")) end
+  local sep = rawget(_G, "DECIMAL_SEPERATOR")
+  if type(sep) ~= "string" or sep == "" then sep = ns.Value(GetLocale) == "deDE" and "," or "." end
+  if sep ~= "." then return (s:gsub("%.", (sep:gsub("%%", "%%%%")))) end
   return s
 end
 

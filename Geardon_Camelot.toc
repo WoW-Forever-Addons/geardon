@@ -2,11 +2,25 @@
 ## Title: |cff3fa9f5Gear|rdon
 ## Notes: Item level for WoW Forever: on every slot of the character and inspect frame, on bags, bank, loot and quest rewards with an upgrade arrow, in item and player tooltips and for your whole group.
 ## Notes-deDE: Gegenstandsstufe für WoW Forever: an jedem Platz im Charakter- und Betrachten-Fenster, auf Taschen, Bank, Beute und Questbelohnungen mit Pfeil für Verbesserungen, in Gegenstands- und Spieler-Tooltips und für deine ganze Gruppe.
+## Notes-frFR: Niveau d’objet pour WoW Forever : sur chaque emplacement de la feuille de personnage et de la fenêtre d’inspection, dans les sacs et la banque, sur le butin et les récompenses de quête avec une flèche d’amélioration, dans les bulles d’aide des objets et des joueurs, et pour tout votre groupe.
+## Notes-esES: Nivel de objeto para WoW Forever: en cada casilla de las ventanas del personaje y de inspección, en bolsas, banco, botín y recompensas de misión con flecha de mejora, en las descripciones de objetos y jugadores y para todo tu grupo.
+## Notes-esMX: Nivel de objeto para WoW Forever: en cada casilla de la ventana de personaje y de inspección, en bolsas, banco, botín y recompensas de misión con flecha de mejora, en las descripciones de objetos y jugadores y para todo tu grupo.
+## Notes-ptBR: Nível de item para o WoW Forever: em cada espaço da janela do personagem e da inspeção, nas bolsas, no banco, no saque e nas recompensas de missão com seta de aprimoramento, nas dicas de interface de itens e jogadores e para todo o seu grupo.
+## Notes-ruRU: Уровень предметов для WoW Forever: в каждой ячейке окна персонажа и окна осмотра, в сумках, банке, на добыче и наградах за задания со стрелкой улучшения, в подсказках к предметам и игрокам и для всей группы.
+## Notes-koKR: WoW Forever용 아이템 레벨: 캐릭터 창과 살펴보기 창의 모든 칸, 가방, 은행, 전리품, 퀘스트 보상에 표시하고 더 좋은 장비는 화살표로 알려 줍니다. 아이템 및 플레이어 툴팁에도 표시하며 파티 전체의 아이템 레벨도 보여 줍니다.
+## Notes-zhTW: WoW Forever 物品等級顯示：角色面板與觀察視窗的每個欄位、背包、銀行、戰利品與任務獎勵(附較強物品箭頭)、物品與玩家提示資訊，以及整個隊伍。
 ## Author: DonCoohd
 ## Version: 1.0.0
 ## X-Curse-Project-ID: 1727778
 ## Category: Inventory
 ## Category-deDE: Inventar
+## Category-frFR: Inventaire
+## Category-esES: Inventario
+## Category-esMX: Inventario
+## Category-ptBR: Inventário
+## Category-ruRU: Инвентарь
+## Category-koKR: 소지품
+## Category-zhTW: 物品欄
 ## IconTexture: Interface\Icons\INV_Chest_Plate06
 ## SavedVariables: GeardonDB
 ## AddonCompartmentFunc: Geardon_OnAddonCompartmentClick
@@ -14,6 +28,13 @@
 
 Locales\enUS.lua
 Locales\deDE.lua
+Locales\frFR.lua
+Locales\esES.lua
+Locales\esMX.lua
+Locales\ptBR.lua
+Locales\ruRU.lua
+Locales\koKR.lua
+Locales\zhTW.lua
 Core.lua
 Style.lua
 SettingsUI.lua
