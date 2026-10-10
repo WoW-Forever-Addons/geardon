@@ -19,10 +19,38 @@ local function SetArrow(tex)
   end
 end
 
-local function ApplyFont(o)
+-- (1.2.0, Daniel 10.10.) Green arrow, or the same arrow in the warning colour
+-- when the upgrade is not sure (other quality, a set bonus at stake).
+local function ArrowLook(tex, check)
+  if tex._check == check then return end
+  tex._check = check
+  if check then
+    if tex.SetDesaturated then pcall(tex.SetDesaturated, tex, true) end
+    local w = ns.Style and ns.Style.COLORS and ns.Style.COLORS.warning or { 0.95, 0.75, 0.25 }
+    if tex.SetVertexColor then pcall(tex.SetVertexColor, tex, w[1], w[2], w[3]) end
+  else
+    if tex.SetDesaturated then pcall(tex.SetDesaturated, tex, false) end
+    if tex.SetVertexColor then pcall(tex.SetVertexColor, tex, 1, 1, 1) end
+  end
+end
+
+-- (1.2.0) Position and size per place: "character" (character frame, inspect
+-- frame, equipment flyout), "bags" (bags, bank, bag addons; the old keys) and
+-- "other" (loot, quest rewards, merchants).
+local PLACE_KEYS = {
+  character = { "numberPositionChar", "numberSizeChar" },
+  bags = { "numberPosition", "numberSize" },
+  other = { "numberPositionOther", "numberSizeOther" },
+}
+function ns.PlaceLook(place)
   local db = ns.db or ns.defaults
-  local size = math.max(8, math.min(18, tonumber(db.numberSize) or 12))
-  local pos = db.numberPosition or "BOTTOM"
+  local keys = PLACE_KEYS[place or "bags"] or PLACE_KEYS.bags
+  local size = math.max(8, math.min(18, tonumber(db[keys[2]]) or 12))
+  return db[keys[1]] or "BOTTOM", size
+end
+
+local function ApplyFont(o)
+  local pos, size = ns.PlaceLook(o._place)
   if o._size ~= size then
     local path = o.text:GetFont()
     if not path then
@@ -71,23 +99,72 @@ local function Get(button)
   return o
 end
 
--- opts: upgrade (arrow), weak (warning colour), color { r, g, b }.
+-- (1.2.0) Small "BoE" in the top right corner, made when first needed.
+local function SetBoE(o, on)
+  if not on then
+    if o.boe then o.boe:Hide() end
+    return
+  end
+  if not o.boe then
+    o.boe = o:CreateFontString(nil, "OVERLAY", "NumberFontNormal")
+    local path = o.boe:GetFont()
+    if path then pcall(o.boe.SetFont, o.boe, path, 9, "OUTLINE") end
+    o.boe:SetPoint("TOPRIGHT", o, "TOPRIGHT", -1, -2)
+    local c = ns.Style and ns.Style.COLORS and ns.Style.COLORS.accent or { 0.25, 0.66, 0.96 }
+    o.boe:SetTextColor(c[1], c[2], c[3])
+  end
+  o.boe:SetText(ns.L["BoE"])
+  o.boe:Show()
+end
+
+local function Rgb(key, fallback)
+  local c = ns.Style and ns.Style.COLORS and ns.Style.COLORS[key]
+  if c then return c[1], c[2], c[3] end
+  return fallback[1], fallback[2], fallback[3]
+end
+
+-- (1.2.0) Colour by the gap to your average: above it good (green), down to
+-- "behind" levels below it white, further below in the warning colour.
+local function GapColor(level)
+  local avg = ns.PlayerAverage()
+  if not (avg and level) then return 1, 1, 1 end
+  local gap = level - avg
+  if gap > 0.05 then return Rgb("good", { 0.4, 0.8, 0.45 }) end
+  local behind = tonumber(ns.db and ns.db.behindLevels) or 8
+  if gap < -behind then return Rgb("warning", { 0.95, 0.75, 0.25 }) end
+  return 1, 1, 1
+end
+
+-- opts: upgrade (arrow), check (yellow arrow), weak (warning colour), behind
+-- (critical colour), place ("character", "bags", "other"), boe (BoE mark).
+-- level may be nil when only the BoE mark is shown.
 function ns.ShowLevel(button, level, quality, opts)
-  if type(button) ~= "table" or not ns.Num(level) then return ns.HideLevel(button) end
+  level = ns.Num(level)
+  local boe = opts and opts.boe
+  if type(button) ~= "table" or not (level or boe) then return ns.HideLevel(button) end
   local o = Get(button)
+  local place = opts and opts.place or "bags"
+  if o._place ~= place then o._place, o._size, o._pos = place, nil, nil end
   ApplyFont(o)
-  o.text:SetText(ns.FormatLevel(level))
+  o.text:SetText(level and ns.FormatLevel(level) or "")
   local r, g, b = 1, 1, 1
-  if opts and opts.weak then
+  if opts and opts.behind then
+    r, g, b = Rgb("critical", { 0.92, 0.35, 0.32 })
+  elseif opts and opts.weak then
     local w = ns.Style and ns.Style.COLORS and ns.Style.COLORS.warning
     if w then r, g, b = w[1], w[2], w[3] end
+  elseif ns.db and ns.db.numberColor == "gap" then
+    r, g, b = GapColor(level)
   elseif ns.db and ns.db.numberColor == "quality" then
     -- a bit lighter than the border: blue on a blue (rare) border is hard to read
     r, g, b = ns.QualityColor(quality)
     r, g, b = r + (1 - r) * 0.35, g + (1 - g) * 0.35, b + (1 - b) * 0.35
   end
   o.text:SetTextColor(r, g, b)
-  o.arrow:SetShown(opts and opts.upgrade and ns.db and ns.db.upgradeArrow and true or false)
+  local arrow = level and opts and opts.upgrade and ns.db and ns.db.upgradeArrow and true or false
+  if arrow then ArrowLook(o.arrow, opts.check and true or false) end
+  o.arrow:SetShown(arrow)
+  SetBoE(o, boe and true or false)
   if not o:IsShown() then o:Show() end
   o._on = true
 end
@@ -103,29 +180,43 @@ function ns.HideLevel(button)
   end
 end
 
+-- (1.2.0) Filter "only Uncommon and above" for the numbers on icons.
+function ns.QualityShown(quality)
+  if ns.db and ns.db.minQualityUncommon then return (ns.Num(quality) or 1) >= 2 end
+  return true
+end
+
 -- Shows the number for an item link on a button (bags, bank, loot, rewards).
 -- Returns true when a number is shown, "pending" while the item loads.
 -- Unchanged item and version: nothing to do (bags are polled every second).
-local ARROW, NO_ARROW = { upgrade = true }, { upgrade = false }
-function ns.ShowItemLevel(button, link, arrow)
+-- (1.2.0) place: see ns.ShowLevel; bag, slot: where the item is (BoE mark).
+local opts = {} -- reused: ShowLevel does not keep it
+function ns.ShowItemLevel(button, link, arrow, place, bag, slot)
   if not link then ns.HideLevel(button) return false end
   local o = overlays[button]
-  if o and o._link == link and o._ver == ns.version and o._arrowWanted == arrow then
+  if o and o._link == link and o._ver == ns.version and o._arrowWanted == arrow and o._bag == bag and o._slot == slot then
     stats.skipped = stats.skipped + 1
     return o._result
   end
   local info = ns.ItemInfo(link)
   if not info then ns.HideLevel(button) return "pending" end
   local result = false
-  if ns.IsGear(info) then
-    ns.ShowLevel(button, info.level, info.quality, (arrow and ns.IsUpgrade(info)) and ARROW or NO_ARROW)
+  local boe = bag and slot and ns.db and ns.db.boeMarker and ns.IsBoE and ns.IsBoE(info, bag, slot) or false
+  if ns.IsGear(info) and ns.QualityShown(info.quality) then
+    local up, check = false, false
+    if arrow then up, check = ns.IsUpgrade(info) end
+    opts.upgrade, opts.check, opts.place, opts.boe = up, check, place, boe
+    ns.ShowLevel(button, info.level, info.quality, opts)
     stats.shown = stats.shown + 1
     result = true
+  elseif boe then
+    opts.upgrade, opts.check, opts.place, opts.boe = false, false, place, true
+    ns.ShowLevel(button, nil, info.quality, opts)
   else
     ns.HideLevel(button)
   end
   o = overlays[button]
-  if o then o._link, o._ver, o._arrowWanted, o._result = link, ns.version, arrow, result end
+  if o then o._link, o._ver, o._arrowWanted, o._result, o._bag, o._slot = link, ns.version, arrow, result, bag, slot end
   return result
 end
 

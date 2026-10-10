@@ -111,14 +111,17 @@ function ns.ItemInfo(link)
   local getInstant = (C_Item and C_Item.GetItemInfoInstant) or GetItemInfoInstant
   local _, _, _, equipLoc, _, classID, subclassID = ns.Results(getInstant, link)
   local getInfo = (C_Item and C_Item.GetItemInfo) or GetItemInfo
-  local name, _, quality, baseLevel, reqLevel = ns.Results(getInfo, link)
+  -- (1.2.0, Daniel 10.10.) also bindType (14th: 2 = bind on equip) and setID (16th) of GetItemInfo
+  local name, _, quality, baseLevel, reqLevel, _, _, _, _, _, _, _, _, bindType, _, setID = ns.Results(getInfo, link)
   if not ns.Str(name) then Request(itemID) return nil end
   local level = ns.Num(ns.Results(C_Item and C_Item.GetDetailedItemLevelInfo or GetDetailedItemLevelInfo, link))
     or ns.Num(baseLevel)
   if not level then stats.noLevel = stats.noLevel + 1 end
+  setID = ns.Num(setID)
   local info = {
     itemID = itemID, level = level, quality = ns.Num(quality), reqLevel = ns.Num(reqLevel) or 0,
     equipLoc = ns.Str(equipLoc), classID = ns.Num(classID), subclassID = ns.Num(subclassID),
+    bindType = ns.Num(bindType), setID = (setID and setID > 0) and setID or nil, link = link,
   }
   if cacheSize > 3000 then wipe(cache) cacheSize = 0 end
   cache[link] = info
@@ -184,6 +187,7 @@ local function ReadEquipped()
         if cur and cur > 0 then level = cur end
       end
       equipped[name] = { link = link, level = level, quality = info and info.quality, equipLoc = info and info.equipLoc,
+        classID = info and info.classID, subclassID = info and info.subclassID, setID = info and info.setID,
         pending = info == nil or level == nil }
       items = items + 1
     elseif id and ns.Call(GetInventoryItemTexture, "player", id) ~= nil then
@@ -203,6 +207,7 @@ ns.On("PLAYER_LEVEL_UP", ns.BumpVersion)
 ns.On("PLAYER_LEVEL_CHANGED", ns.BumpVersion)       -- fires after the level is updated
 ns.On("SKILL_LINES_CHANGED", ns.BumpVersion)        -- weapon skills, armor, dual wield
 ns.On("LEARNED_SPELL_IN_SKILL_LINE", ns.BumpVersion)
+ns.On("LEARNED_SPELL_IN_TAB", ns.BumpVersion)       -- (1.2.0) classic event: mail or plate learned at 40
 
 function ns.Equipped()
   if equippedDirty then
@@ -309,10 +314,34 @@ function ns.Compare(info)
   return info.level - bestLevel, bestSlot, bestLevel, bestLoses2H or nil
 end
 
+-- (1.2.0, Daniel 10.10.) Quality of what the item would replace: the slot's item; a two-hand weapon
+-- replaces both hands (the better quality of the two counts, so "higher quality" is never overstated).
+-- nil: the slot is empty.
+function ns.ReplacedQuality(info, slot)
+  local eq = ns.Equipped()
+  local e = eq[slot or ""]
+  local q = e and e.quality
+  if info and info.equipLoc == "INVTYPE_2HWEAPON" then
+    local oh = eq.SecondaryHandSlot
+    if oh and oh.quality and (not q or oh.quality > q) then q = oh.quality end
+  end
+  return q
+end
+
+-- (1.2.0) Your level, read once per version (the version goes up with
+-- PLAYER_LEVEL_UP and PLAYER_LEVEL_CHANGED).
+local levelCache, levelVer = 0, nil
+function ns.PlayerLevel()
+  if levelVer ~= ns.version then
+    levelCache, levelVer = ns.Num(ns.Value(UnitLevel, "player")) or 0, ns.version
+  end
+  return levelCache
+end
+
 -- Can you wear it now? (class, armor type, weapon skill and level)
 function ns.CanWear(info)
   if type(info) ~= "table" then return false end
-  local level = ns.Num(ns.Value(UnitLevel, "player")) or 0
+  local level = ns.PlayerLevel()
   if info.reqLevel and info.reqLevel > level then return false end
   if C_PlayerInfo and C_PlayerInfo.CanUseItem then
     local v = ns.Value(C_PlayerInfo.CanUseItem, info.itemID)
@@ -321,12 +350,70 @@ function ns.CanWear(info)
   return true
 end
 
--- Green arrow: higher than what you wear and wearable now.
+---------------------------------------------------------------------------
+-- (1.2.0, Daniel 10.10.) The verdict for one item against what you wear.
+-- In Forever the stats come from item level x quality x slot (a budget table
+-- like RandPropPoints, foreverchanges.pro/items). That table could not be read
+-- from a source we can check, so no budget is computed here. What holds
+-- without numbers: a higher item level of the same or a higher quality, or
+-- the same item level of a higher quality, is more budget ("sure"). A higher
+-- item level of a lower quality may or may not be: "check" (yellow arrow,
+-- tooltip says why). A lower item level of a higher quality gets no arrow, the
+-- tooltip says to compare the stats.
+-- Returns nil (no gear, nothing to compare) or a table:
+--   diff, slot, eqLevel, loses2H  as ns.Compare
+--   upgrade = true      arrow wanted
+--   check = "quality" | "set" | "quality+set"   unsure: yellow arrow
+--   block = "level" | "wear" | "twohand" | "lower" | "weapon" | "armor" | "stats"   why there is no arrow
+--   note = "quality"    lower item level but higher quality (tooltip hint only)
+---------------------------------------------------------------------------
+-- into: optional table to fill (reused on hot paths, no garbage per item).
+function ns.Judge(info, into)
+  if not ns.IsGear(info) then return nil end
+  local diff, slot, eqLevel, loses2H = ns.Compare(info)
+  if not diff then return nil end
+  local v = into or {}
+  v.diff, v.slot, v.eqLevel, v.loses2H = diff, slot, eqLevel, loses2H
+  v.upgrade, v.check, v.block, v.note = nil, nil, nil, nil
+  local q, eqQ = info.quality, ns.ReplacedQuality(info, slot)
+  local higherQ = q and eqQ and q > eqQ
+  local lowerQ = q and eqQ and q < eqQ
+  if info.reqLevel and info.reqLevel > ns.PlayerLevel() then
+    v.block = "level"
+  elseif not ns.CanWear(info) then
+    v.block = "wear"
+  elseif loses2H then
+    v.block = "twohand" -- a one-hand or off-hand item alone would take your two-hand weapon away
+  elseif not (diff > 0 or (diff == 0 and higherQ)) then
+    v.block = "lower"
+    if higherQ and diff < 0 then v.note = "quality" end
+  elseif ns.WeaponTypeOK and not ns.WeaponTypeOK(info, slot) then
+    v.block = "weapon"
+  elseif ns.ArmorTypeOK and not ns.ArmorTypeOK(info) then
+    v.block = "armor"
+  elseif ns.MainStatsOK and ns.MainStatsOK(info) == false then
+    v.block = "stats"
+  else
+    v.upgrade = true
+    local set = ns.SetPieceAtStake and ns.SetPieceAtStake(slot, info)
+    if lowerQ and set then v.check = "quality+set"
+    elseif lowerQ then v.check = "quality"
+    elseif set then v.check = "set" end
+  end
+  return v
+end
+
+-- Upgrade arrow: higher than what you wear and wearable now. Second value:
+-- true when the arrow is the yellow "check" one.
+local scratch = {}
 function ns.IsUpgrade(info)
-  if not ns.CanWear(info) then return false end
-  local diff, _, _, replaces2H = ns.Compare(info)
-  -- a one-hand or off-hand item alone would take your two-hand weapon away: no arrow
-  return diff ~= nil and diff > 0 and not replaces2H
+  local v = ns.Judge(info, scratch)
+  if not (v and v.upgrade) then return false end
+  if v.check then
+    if ns.db and ns.db.arrowUncertain == false then return false end
+    return true, true
+  end
+  return true, false
 end
 
 -- Decimal separator of the client (Blizzard's DECIMAL_SEPERATOR: comma in deDE, frFR, esES, ptBR, ruRU).

@@ -55,6 +55,21 @@ local function DiffText(diff)
   return "|cff9ea3ad=|r"
 end
 
+-- (1.2.0, Daniel 10.10.) Why an item that is higher than yours has no arrow,
+-- and why an arrow is the yellow "check" one.
+local BLOCK_TEXT = {
+  level = "No arrow: you cannot wear it yet.",
+  wear = "Your character cannot use it.",
+  twohand = "No arrow: it would take your two-hand weapon away.",
+  weapon = "No arrow: not a weapon type you use.",
+  armor = "No arrow: not your best armor type.",
+  stats = "No arrow: none of your class's main stats.",
+}
+local CHECK_TEXT = {
+  quality = "Lower quality than yours: compare the stats.",
+  set = "Replaces a piece of your set: you may lose the set bonus.",
+}
+
 local function OnItem(tooltip, data)
   local kind = Kind(tooltip)
   if not kind then return end
@@ -67,43 +82,93 @@ local function OnItem(tooltip, data)
   local hasLine = HasLevelLine(data, info.level)
   if hasLine then stats.gameLevel = stats.gameLevel + 1 end
   local showLevel = ns.db.tooltipLevel and not hasLine
-  local diff, slot, eqLevel
+  local v
   if kind == "full" and ns.db.tooltipCompare then
-    diff, slot, eqLevel = ns.Compare(info)
+    v = ns.Judge(info)
     -- an item you wear (either ring, trinket or weapon slot) is not compared
     for _, name in ipairs(ns.TargetSlots(info.equipLoc) or {}) do
       local eq = ns.Equipped()[name]
-      if eq and eq.link == link then diff = nil end
+      if eq and eq.link == link then v = nil end
     end
   end
-  if not showLevel and not diff then return end
+  local diff, slot, eqLevel = v and v.diff, v and v.slot, v and v.eqLevel
+  local split = kind == "full" and ns.db.tooltipStatSplit and ns.StatSplitText(ns.ItemStats(info, type(data) == "table" and data.lines))
+  if not showLevel and not diff and not split then return end
   local nr, ng, nb = 1, 0.82, 0 -- Blizzard's yellow for item level
-  local left = showLevel and L["Item level %s"]:format(ns.FormatLevel(info.level)) or " "
-  if diff then
-    local where = (eqLevel and eqLevel > 0)
-      and L["%s vs. %s (%s)"]:format(DiffText(diff), ns.SlotLabel(slot), ns.FormatLevel(eqLevel))
-      or L["%s, %s slot empty"]:format(DiffText(diff), ns.SlotLabel(slot))
-    if not showLevel then left = L["Item level"] end
-    local sr, sg, sb = Rgb("textSecondary")
-    tooltip:AddDoubleLine(left, where, nr, ng, nb, sr, sg, sb)
-    stats.compare = stats.compare + 1
-  else
-    tooltip:AddLine(left, nr, ng, nb)
+  local sr, sg, sb = Rgb("textSecondary")
+  if showLevel or diff then
+    local left = showLevel and L["Item level %s"]:format(ns.FormatLevel(info.level)) or " "
+    if diff then
+      local where = (eqLevel and eqLevel > 0)
+        and L["%s vs. %s (%s)"]:format(DiffText(diff), ns.SlotLabel(slot), ns.FormatLevel(eqLevel))
+        or L["%s, %s slot empty"]:format(DiffText(diff), ns.SlotLabel(slot))
+      if not showLevel then left = L["Item level"] end
+      tooltip:AddDoubleLine(left, where, nr, ng, nb, sr, sg, sb)
+      stats.compare = stats.compare + 1
+    else
+      tooltip:AddLine(left, nr, ng, nb)
+    end
+    if showLevel then stats.levelAdded = stats.levelAdded + 1 end
   end
-  if showLevel then stats.levelAdded = stats.levelAdded + 1 end
+  if split then
+    tooltip:AddLine(split, sr, sg, sb)
+    stats.split = (stats.split or 0) + 1
+  end
+  if v then
+    local wr, wg, wb = Rgb("warning")
+    if v.check then
+      for key in v.check:gmatch("[^+]+") do
+        if CHECK_TEXT[key] then tooltip:AddLine(L[CHECK_TEXT[key]], wr, wg, wb, true) end
+      end
+    elseif v.note == "quality" then
+      tooltip:AddLine(L["Higher quality than yours: compare the stats."], wr, wg, wb, true)
+    elseif v.block and BLOCK_TEXT[v.block] and diff and diff > 0 then
+      local hr, hg, hb = Rgb("textHint")
+      tooltip:AddLine(L[BLOCK_TEXT[v.block]], hr, hg, hb, true)
+    end
+  end
+end
+
+-- (1.2.0, Daniel 10.10.) What our post-call saw on the player tooltip last:
+-- the player's GUID and whether the item level line is in it. A result that
+-- arrives while that tooltip is still open goes in right away, once.
+local unitShown = { guid = nil, line = false }
+
+local function AddUnitLine(tooltip, level)
+  -- Blizzard's yellow for the label (like the item level in item tooltips
+  -- and on the character frame), the value in white
+  tooltip:AddDoubleLine(L["Item level"], ns.FormatAverage(level), 1, 0.82, 0, 1, 1, 1)
+  unitShown.line = true
 end
 
 local function OnUnit(tooltip, data)
   if not ns.db.unitTooltip or tooltip ~= rawget(_G, "GameTooltip") then return end
+  unitShown.guid, unitShown.line = nil, false
   local guid = type(data) == "table" and data.guid or nil
   if not (type(guid) == "string" and ns.Usable(guid)) then return end
   if not guid:find("^Player%-") then return end
-  local level, src = ns.LevelOf and ns.LevelOf(guid)
+  unitShown.guid = guid
+  -- known value (also in combat, where nothing new is asked); else the line
+  -- comes when the inspect answers (ns.UnitTooltipLevelArrived), no placeholder
+  local level = ns.LevelOf and ns.LevelOf(guid)
   if not level then return end
   stats.units = stats.units + 1
-  -- Blizzard's yellow for the label (like the item level in item tooltips
-  -- and on the character frame), the value in white
-  tooltip:AddDoubleLine(L["Item level"], ns.FormatAverage(level), 1, 0.82, 0, 1, 1, 1)
+  AddUnitLine(tooltip, level)
+end
+
+-- The open player tooltip still shows this player (same GUID) and has no
+-- line yet: add it and let the tooltip resize (Show on the shown tooltip).
+function ns.UnitTooltipLevelArrived(guid)
+  local tt = rawget(_G, "GameTooltip")
+  if not (tt and ns.db.unitTooltip and guid and unitShown.guid == guid and not unitShown.line) then return end
+  if ns.Method(tt, "IsShown") ~= true then return end
+  local _, unit = ns.Results(tt.GetUnit, tt)
+  if type(unit) ~= "string" or not ns.Usable(unit) or ns.Value(UnitGUID, unit) ~= guid then return end
+  local level = ns.LevelOf and ns.LevelOf(guid)
+  if not level then return end
+  AddUnitLine(tt, level)
+  pcall(tt.Show, tt)
+  stats.live = (stats.live or 0) + 1
 end
 
 ns.OnInit(function()

@@ -17,24 +17,39 @@ ns.defaults = {
   showRewards = true,
   showFlyout = true,          -- equipment flyout of the character frame
   showMerchant = true,        -- merchant and buyback
-  -- look of the numbers on item buttons
+  bagAddons = true,           -- (1.2.0) Baganator and Bagnon
+  boeMarker = true,           -- (1.2.0) "BoE" on bind-on-equip items in bags not yet bound
+  behindMarker = true,        -- (1.2.0) slots far below your level in the critical colour
+  behindLevels = 8,           -- (1.2.0) "far below": item level < your level - this
+  chatChange = true,          -- (1.2.0) chat line when your average changes
+  -- look of the numbers on item buttons; (1.2.0) position and size per place:
+  -- bags (bags, bank, bag addons: the old keys), character frame, other windows
   numberPosition = "BOTTOM",  -- "BOTTOM", "TOP", "CENTER"
-  numberColor = "quality",    -- "quality", "white"
+  numberColor = "quality",    -- "quality", "white", (1.2.0) "gap" (gap to your average)
   numberSize = 12,
+  numberPositionChar = "BOTTOM",
+  numberSizeChar = 12,
+  numberPositionOther = "BOTTOM",
+  numberSizeOther = 12,
   showGrey = false,           -- also on poor (grey) items
+  minQualityUncommon = false, -- (1.2.0) numbers only on Uncommon (green) and better
   upgradeArrow = true,        -- green arrow on bags, bank, loot and rewards
+  arrowUncertain = true,      -- (1.2.0) yellow arrow when unsure (lower quality, set bonus at stake)
+  arrowWeaponMatch = true,    -- (1.2.0) arrow only on weapon types you use
+  arrowBestArmor = false,     -- (1.2.0) arrow only on your best armour type
+  arrowMainStats = true,      -- (1.2.0) no arrow on items with none of your class's main stats
   -- tooltips
   tooltipLevel = true,        -- "Item level 18" when the game does not show it
   tooltipCompare = true,      -- "+3 over equipped (Head 15)"
+  tooltipStatSplit = true,    -- (1.2.0) "Agility 60% · Stamina 40%"
   unitTooltip = true,         -- average item level on player tooltips
+  mouseoverLevel = true,      -- (1.2.0) inspect any player you point at or target (out of combat)
   -- group
   groupScan = true,           -- inspect group members out of combat
   groupShare = true,          -- send and receive item level with Geardon users
-  groupWindow = true,         -- window with the group's item level, in a party
-  groupWindowRaid = false,    -- also in a raid
 }
 
-ns.SCHEMA = 1
+ns.SCHEMA = 2 -- (1.2.0) 2: mouseoverLevel on by default
 ns.WORDMARK = "|cff3fa9f5Gear|rdon"
 
 ---------------------------------------------------------------------------
@@ -136,6 +151,26 @@ local function RunAddon(name)
   for _, fn in ipairs(list) do ns.SafeCall("addon:" .. name, fn) end
 end
 
+-- (1.2.0, Daniel 10.10.) The old position and size were for every place:
+-- they become the start values of the new places (character frame, other windows).
+-- Schema 2: the item level of players you point at or target is on by
+-- default. A saved "off" from before cannot be told apart from the old default
+-- (1.2.0 builds before this had it off), so it is switched on once; a later
+-- "off" stays (the schema is 2 then).
+-- (1.2.0) The group window opens only by hand now: its auto-show settings are gone.
+function ns.MigrateDB(db)
+  db.groupWindow, db.groupWindowRaid = nil, nil
+  if next(db) ~= nil and (tonumber(db.schema) or 0) < 2 and db.mouseoverLevel == false then
+    db.mouseoverLevel = true
+  end
+  if db.numberPositionChar == nil and type(db.numberPosition) == "string" then
+    db.numberPositionChar, db.numberPositionOther = db.numberPosition, db.numberPosition
+  end
+  if db.numberSizeChar == nil and type(db.numberSize) == "number" then
+    db.numberSizeChar, db.numberSizeOther = db.numberSize, db.numberSize
+  end
+end
+
 frame:RegisterEvent("ADDON_LOADED")
 frame:SetScript("OnEvent", function(_, event, ...)
   if event == "ADDON_LOADED" then
@@ -143,6 +178,7 @@ frame:SetScript("OnEvent", function(_, event, ...)
     if name == addonName then
       GeardonDB = type(GeardonDB) == "table" and GeardonDB or {}
       ns.firstRun = next(GeardonDB) == nil
+      ns.MigrateDB(GeardonDB)
       for k, v in pairs(ns.defaults) do
         if GeardonDB[k] == nil or type(GeardonDB[k]) ~= type(v) then GeardonDB[k] = v end
       end
@@ -267,6 +303,7 @@ ns.COMMANDS = {
   { "/gd", "options" },
   { "/gd group", "show or hide the group window" },
   { "/gd scan", "inspect the group again" },
+  { "/gd check", "gear check: behind your level, dungeons, bag cleanup" },
   { "/gd diag", "diagnostics window" },
   { "/gd diag chat", "diagnostics in chat" },
   { "/gd help", "this list" },
@@ -286,6 +323,8 @@ function ns.Slash(msg)
     if ns.ShowDiag then ns.ShowDiag() elseif ns.PrintDiag then ns.PrintDiag() end
   elseif msg == "group" or msg == "gruppe" then
     if ns.ToggleGroupWindow then ns.ToggleGroupWindow() end
+  elseif msg == "check" or msg == "gear" or msg == "bags" then
+    if ns.ShowCheck then ns.ShowCheck() end
   elseif msg == "scan" then
     if ns.RescanGroup then ns.RescanGroup(true) end
   elseif msg == "help" or msg == "?" or msg == "hilfe" then

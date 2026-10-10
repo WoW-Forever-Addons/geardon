@@ -3,13 +3,13 @@ local L = ns.L
 
 ---------------------------------------------------------------------------
 -- Group window (Style kit): one row per member, highest item level first,
--- group average at the bottom. Shows itself in a party (option), in a raid
--- only with its own option. Closing hides it until you leave the group or
--- type /gd group.
+-- group average at the bottom. (1.2.0, Daniel 10.10.) Opens only by hand
+-- (/gd group, the tool in the options), no longer by itself in a group or
+-- raid; it stays open until closed. The group values are still collected
+-- (Group.lua): the player tooltips use them.
 ---------------------------------------------------------------------------
 local WIDTH = 230
 local panel
-local closedThisGroup = false
 local forced = false
 local queued = false
 
@@ -76,9 +76,9 @@ local function Build()
     get = function(key) return Store()[key] end,
     set = function(key, value) Store()[key] = value end,
     defaultPoint = { "LEFT", "LEFT", 260, 120 },
-    closeTooltip = { L["Hide window"], nil, L["Hidden until you join another group. /gd group shows it again."] },
+    closeTooltip = { L["Hide window"], nil, L["/gd group shows it again."] },
     collapseTooltip = { L["Collapse / expand"], nil, nil },
-    onClose = function() closedThisGroup = true forced = false if panel then panel:FadeOut() end end,
+    onClose = function() forced = false if panel then panel:FadeOut() end end,
     buttons = { { kind = "options", key = "options", tooltip = { L["Options"], nil, L["Opens the Geardon options."] },
       onClick = function() ns.OpenOptions() end } },
   })
@@ -120,14 +120,7 @@ local function Fill()
   end
 end
 
-local function Wanted()
-  if forced then return true end
-  if closedThisGroup or not ns.db.groupWindow then return false end
-  local members = ns.Num(ns.Value(GetNumGroupMembers)) or 0
-  if members <= 1 then return false end
-  if ns.Value(IsInRaid) == true and not ns.db.groupWindowRaid then return false end
-  return true
-end
+local function Wanted() return forced end
 
 local function Update()
   queued = false
@@ -151,10 +144,10 @@ end
 
 function ns.ToggleGroupWindow()
   if panel and panel:IsShown() then
-    forced, closedThisGroup = false, true
+    forced = false
     panel:FadeOut()
   else
-    forced, closedThisGroup = true, false
+    forced = true
     if (ns.Num(ns.Value(GetNumGroupMembers)) or 0) <= 1 then ns.Print(L["You are not in a group; the window shows only you."]) end
     Update()
   end
@@ -164,7 +157,7 @@ function ns.ResetGroupWindow()
   if panel then panel:ResetPosition() else Store().pos = nil end
 end
 
-ns.On("GROUP_LEFT", function() closedThisGroup, forced = false, false ns.UpdateGroupWindow() end)
-ns.On("GROUP_JOINED", function() closedThisGroup = false ns.UpdateGroupWindow() end)
+ns.On("GROUP_LEFT", function() ns.UpdateGroupWindow() end)
+ns.On("GROUP_JOINED", function() ns.UpdateGroupWindow() end)
 ns.On("PLAYER_ENTERING_WORLD", function() ns.UpdateGroupWindow() end)
 ns.OnInit(function() ns.NewTicker(5, function() if panel and panel:IsShown() then ns.UpdateGroupWindow() end end) end)

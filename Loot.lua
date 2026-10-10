@@ -24,7 +24,7 @@ local function UpdateLoot(lootFrame)
     if type(button) == "table" then
       local slot = ns.Num(ns.Method(element, "GetSlotIndex"))
       local link = ns.db.showLoot and slot and ns.Str(ns.Call(GetLootSlotLink, slot))
-      if ns.ShowItemLevel(button, link or nil, true) == true then n = n + 1 end
+      if ns.ShowItemLevel(button, link or nil, true, "other") == true then n = n + 1 end
     end
   end
   stats.lootItems = n
@@ -57,7 +57,7 @@ local function UpdateRewards(rewards, fromLog)
         link = ns.Str(ns.Call(get, kind, id))
       end
     end
-    if ns.ShowItemLevel(button, link, true) == true then n = n + 1 end
+    if ns.ShowItemLevel(button, link, true, "other") == true then n = n + 1 end
   end
   stats.rewardItems = n
 end

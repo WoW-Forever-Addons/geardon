@@ -17,11 +17,15 @@ local FRESH_INSPECT = 10 * 60 -- seconds before a player is inspected again
 local INSPECT_GAP = 1.5       -- seconds between two inspects
 local INSPECT_TIMEOUT = 4
 local SEND_GAP = 5            -- seconds between two own messages
+local MOUSE_GAP = 3           -- (1.2.0) seconds between two inspects of a player you point at or target
+local DIRECT_MAX_AGE = 15     -- (1.2.0) such a request waits at most this long (and only while the unit still shows the player)
+local KEEP_MAX = 200          -- (1.2.0) players kept at most (mouseover adds strangers)
 
 local levels = {}   -- guid -> { level, src, t, name, class }
 local failed = {}   -- guid -> time until the next try
 local pending       -- { guid, unit, t, tries }
 local nextInspect, lastSend, sendQueued = 0, 0, false
+local direct, lastDirect = {}, -100 -- (1.2.0) [1] the player under the mouse, [2] your target: { guid, unit, t }
 local token
 local stats = { sent = 0, received = 0, requests = 0, inspects = 0, ready = 0, timeouts = 0, foreign = 0 }
 ns.groupStats = stats
@@ -46,6 +50,15 @@ function ns.RememberLevel(guid, level, src, unit, weak, weakLevel)
     e.name = ns.Str(ns.Value(UnitName, unit)) or e.name
     local _, class = ns.Results(UnitClass, unit)
     e.class = ns.Str(class) or e.class
+  end
+  if not levels[guid] then
+    -- (1.2.0) mouseover inspects add strangers: keep the newest KEEP_MAX
+    local n, oldest, oldestT = 0, nil, nil
+    for g, x in pairs(levels) do
+      n = n + 1
+      if not oldestT or (x.t or 0) < oldestT then oldest, oldestT = g, x.t or 0 end
+    end
+    if n >= KEEP_MAX and oldest then levels[oldest] = nil end
   end
   levels[guid] = e
   failed[guid] = nil
@@ -216,6 +229,7 @@ local function NeedsInspect(unit, now)
   if ns.Value(UnitIsUnit, unit, "player") == true then return nil end
   if ns.Value(UnitIsPlayer, unit) ~= true or ns.Value(UnitIsConnected, unit) ~= true then return nil end
   if (failed[guid] or 0) > now then return nil end
+  if pending and pending.guid == guid then return nil end -- (1.2.0) asked already
   local e = levels[guid]
   if e and e.src == "addon" and now - (e.t or 0) < FRESH_ADDON then return nil end
   if e and e.src == "inspect" and not e.stale and now - (e.t or 0) < FRESH_INSPECT then return nil end
@@ -224,9 +238,60 @@ local function NeedsInspect(unit, now)
   return guid
 end
 
+-- (1.2.0) A unit token that shows this player now: the one asked for, else
+-- mouseover, target, focus or a group member.
+local function UnitFor(guid, first)
+  if first and ns.Value(UnitGUID, first) == guid then return first end
+  for _, u in ipairs({ "mouseover", "target", "focus" }) do
+    if ns.Value(UnitGUID, u) == guid then return u end
+  end
+  for _, u in ipairs(ns.GroupUnits()) do
+    if ns.Value(UnitGUID, u) == guid then return u end
+  end
+  -- (1.2.0, Daniel's diag 10.10.: one hover, inspect answered, no value) the mouse may have moved on
+  -- before the answer came: a nameplate of that player still gives a unit token
+  for i = 1, 40 do
+    local u = "nameplate" .. i
+    if ns.Value(UnitGUID, u) == guid then return u end
+  end
+  return nil
+end
+
 local function FinishPending()
   if pending and not InspectOpen() and ClearInspectPlayer then pcall(ClearInspectPlayer) end
   pending = nil
+end
+
+-- (1.2.0, Daniel 10.10.) Players you point at or target come first: an
+-- inspect starts at once when allowed (out of combat, never while Blizzard's
+-- inspect window is open, no inspect running, the queue's pause over, at most
+-- one such inspect every MOUSE_GAP seconds). A request waits while its unit
+-- (mouseover or target) still shows that player, at most DIRECT_MAX_AGE seconds.
+local function TryDirect(now)
+  if pending or ns.InCombat() or InspectOpen() or now < nextInspect or now - lastDirect < MOUSE_GAP then return false end
+  for i = 1, 2 do
+    local req = direct[i]
+    if req then
+      direct[i] = nil
+      local alive = now - req.t <= DIRECT_MAX_AGE and ns.Value(UnitGUID, req.unit) == req.guid
+      if alive and NeedsInspect(req.unit, now) == req.guid then
+        lastDirect = now
+        if pcall(NotifyInspect, req.unit) then
+          pending = { guid = req.guid, unit = req.unit, t = now, tries = 0, direct = true }
+          if req.unit == "target" then
+            stats.targetInspects = (stats.targetInspects or 0) + 1
+          else
+            stats.mouseInspects = (stats.mouseInspects or 0) + 1
+          end
+        else
+          failed[req.guid] = now + 60
+        end
+        nextInspect = now + INSPECT_GAP
+        return true
+      end
+    end
+  end
+  return false
 end
 
 local function Tick()
@@ -239,8 +304,9 @@ local function Tick()
     end
     return
   end
-  if not ns.db.groupScan or not InGroup() or ns.InCombat() or InspectOpen() then return end
-  if now < nextInspect then return end
+  if TryDirect(now) then return end
+  if ns.InCombat() or InspectOpen() or now < nextInspect then return end
+  if not ns.db.groupScan or not InGroup() then return end
   -- members without any value first, then the ones that changed gear or got old
   local pick, pickGuid
   for _, unit in ipairs(ns.GroupUnits()) do
@@ -267,8 +333,14 @@ end
 
 local function ReadPending()
   if not pending then return end
-  local unit = pending.unit
-  if ns.Value(UnitGUID, unit) ~= pending.guid then FinishPending() return end
+  local unit = UnitFor(pending.guid, pending.unit)
+  if not unit then
+    stats.lost = (stats.lost or 0) + 1 -- (1.2.0) diag: the player was gone when the answer came
+    if pending.direct then failed[pending.guid] = Now() + 20 end -- the mouse or target moved on: not again right away
+    FinishPending()
+    return
+  end
+  pending.unit = unit
   local avg, complete, slots = ns.InspectAverage(unit)
   if (not complete or not avg) and pending.tries < 6 then
     pending.tries = pending.tries + 1
@@ -279,8 +351,13 @@ local function ReadPending()
   if avg and complete then
     local _, _, weak = ns.Average(slots or {})
     local w = weak and slots[weak]
-    ns.RememberLevel(pending.guid, avg, "inspect", unit, weak, w and w.level)
+    local guid = pending.guid
+    ns.RememberLevel(guid, avg, "inspect", unit, weak, w and w.level)
+    stats.stored = (stats.stored or 0) + 1
+    -- (1.2.0) the tooltip of that player may be open right now: the line goes in at once
+    if ns.UnitTooltipLevelArrived then ns.SafeCall("tooltip:arrived", ns.UnitTooltipLevelArrived, guid) end
   else
+    stats.notLoaded = (stats.notLoaded or 0) + 1 -- (1.2.0) diag
     failed[pending.guid] = Now() + 15 -- items did not load: try again soon
   end
   FinishPending()
@@ -292,6 +369,21 @@ ns.On("INSPECT_READY", function(_, guid)
     ReadPending()
   end
 end)
+
+-- (1.2.0, Daniel 10.10.) Item level of any player you point at or target
+-- (option mouseoverLevel, on): the inspect starts at once through the queue
+-- above (TryDirect). In combat nothing is asked; the tooltip shows the last
+-- known value. Known values are not asked again for 10 minutes.
+local function RequestDirect(slot, unit)
+  if not (ns.db.mouseoverLevel and ns.db.unitTooltip) or ns.InCombat() or InspectOpen() then return end
+  local now = Now()
+  local guid = NeedsInspect(unit, now)
+  if not guid then return end
+  direct[slot] = { guid = guid, unit = unit, t = now }
+  TryDirect(now)
+end
+ns.On("UPDATE_MOUSEOVER_UNIT", function() RequestDirect(1, "mouseover") end)
+ns.On("PLAYER_TARGET_CHANGED", function() RequestDirect(2, "target") end)
 
 ns.On("UNIT_INVENTORY_CHANGED", function(_, unit)
   if type(unit) ~= "string" or not ns.Usable(unit) or unit == "player" then return end
@@ -365,7 +457,8 @@ end
 function ns.GroupDiag()
   local known = 0
   for _ in pairs(levels) do known = known + 1 end
-  return ("restored %d; known %d; sent %d, not sent %d, received %d, requests %d, other senders %d; inspects %d, ready %d, timeouts %d; prefix %s"):format(
-    stats.restored or 0, known, stats.sent, stats.notSent or 0, stats.received, stats.requests, stats.foreign, stats.inspects, stats.ready,
+  return ("restored %d; known %d; sent %d, not sent %d, received %d, requests %d, other senders %d; inspects %d, mouseover %d, target %d, ready %d (stored %d, gone %d, not loaded %d), timeouts %d; prefix %s"):format(
+    stats.restored or 0, known, stats.sent, stats.notSent or 0, stats.received, stats.requests, stats.foreign, stats.inspects,
+    stats.mouseInspects or 0, stats.targetInspects or 0, stats.ready, stats.stored or 0, stats.lost or 0, stats.notLoaded or 0,
     stats.timeouts, tostring(stats.prefix))
 end

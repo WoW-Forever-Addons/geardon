@@ -33,7 +33,7 @@ local function UpdateFlyout(frame)
     if ns.db.showFlyout and ns.db.showCharacter and ns.Method(button, "IsShown") then
       link = FlyoutLink(rawget(button, "location"))
     end
-    if ns.ShowItemLevel(button, link, false) == true then n = n + 1 end
+    if ns.ShowItemLevel(button, link, false, "character") == true then n = n + 1 end
   end
   stats.flyoutItems = n
 end
@@ -66,7 +66,7 @@ local function UpdateMerchant(frame)
           link = ns.Str(ns.Call(rawget(_G, "GetMerchantItemLink"), (page - 1) * per + i))
         end
       end
-      if ns.ShowItemLevel(button, link, true) == true then n = n + 1 end
+      if ns.ShowItemLevel(button, link, true, "other") == true then n = n + 1 end
     end
   end
   stats.merchantItems = n

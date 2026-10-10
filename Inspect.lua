@@ -83,6 +83,7 @@ local function InspectUnit()
 end
 
 local retry = 0
+local PLACE = { place = "character" }
 local function Update(self)
   stats.updates = stats.updates + 1
   local unit = InspectUnit()
@@ -95,8 +96,8 @@ local function Update(self)
     if button then
       local e = levels[name]
       local grey = e and e.quality == 0 and not ns.db.showGrey
-      if on and e and e.level and e.level > 1 and not grey then
-        ns.ShowLevel(button, e.level, e.quality)
+      if on and e and e.level and e.level > 1 and not grey and ns.QualityShown(e.quality) then
+        ns.ShowLevel(button, e.level, e.quality, PLACE)
       else
         ns.HideLevel(button)
       end

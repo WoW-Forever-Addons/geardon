@@ -11,6 +11,10 @@ local APIS = {
   "C_PaperDollInfo.GetInspectItemLevel", "GetAverageItemLevel", "NotifyInspect", "CanInspect", "ClearInspectPlayer",
   "C_ChatInfo.SendAddonMessage", "TooltipDataProcessor.AddTooltipPostCall", "C_Container.GetContainerItemLink",
   "GetLootSlotLink", "GetQuestItemLink", "GetQuestLogItemLink", "ItemLocation.CreateFromEquipmentSlot",
+  -- (1.2.0)
+  "C_Item.GetItemStats", "GetItemStats", "C_Item.IsBound", "ItemLocation.CreateFromBagAndSlot", "C_TooltipInfo.GetBagItem",
+  "C_TooltipInfo.GetInventoryItem", "C_EquipmentSet.GetEquipmentSetIDs", "C_EquipmentSet.GetItemIDs", "IsPlayerSpell",
+  "C_Map.GetMapInfo", "C_Container.GetContainerNumSlots",
 }
 
 local function Lookup(path)
@@ -75,6 +79,11 @@ function ns.DiagLines()
   out[#out + 1] = "tooltip: " .. Kv(ns.tooltipStats)
   out[#out + 1] = "items: " .. Kv(ns.itemStats)
   out[#out + 1] = "group: " .. (ns.GroupDiag and ns.GroupDiag() or "?")
+  -- (1.2.0)
+  out[#out + 1] = ("upgrade: class %s, best armour %s; %s"):format(tostring(ns.PlayerClass and ns.PlayerClass()),
+    tostring(ns.BestArmorSubclass and ns.BestArmorSubclass()), Kv(ns.upgradeStats))
+  out[#out + 1] = "bag addons: " .. Kv(ns.bagAddonStats)
+  out[#out + 1] = ("gear check: %s; dungeons %s; chat %s"):format(Kv(ns.checkStats), Kv(ns.dungeonStats), Kv(ns.changeStats))
   local watchers = {}
   for key in pairs(ns.Watchers()) do watchers[#watchers + 1] = key end
   table.sort(watchers)

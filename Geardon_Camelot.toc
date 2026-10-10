@@ -10,7 +10,7 @@
 ## Notes-koKR: WoW Forever용 아이템 레벨: 캐릭터 창과 살펴보기 창의 모든 칸, 가방, 은행, 전리품, 퀘스트 보상에 표시하고 더 좋은 장비는 화살표로 알려 줍니다. 아이템 및 플레이어 툴팁에도 표시하며 파티 전체의 아이템 레벨도 보여 줍니다.
 ## Notes-zhTW: WoW Forever 物品等級顯示：角色面板與觀察視窗的每個欄位、背包、銀行、戰利品與任務獎勵(附較強物品箭頭)、物品與玩家提示資訊，以及整個隊伍。
 ## Author: DonCoohd
-## Version: 1.1.0
+## Version: 1.2.0
 ## X-Curse-Project-ID: 1727778
 ## Category: Inventory
 ## Category-deDE: Inventar
@@ -39,14 +39,19 @@ Core.lua
 Style.lua
 SettingsUI.lua
 ItemLevel.lua
+Upgrade.lua
 Overlay.lua
 Character.lua
 Inspect.lua
 Bags.lua
+BagAddons.lua
 Loot.lua
 Flyout.lua
 Tooltip.lua
 Group.lua
 GroupWindow.lua
+Dungeons.lua
+Check.lua
+Changes.lua
 Diag.lua
 Options.lua

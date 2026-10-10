@@ -45,8 +45,9 @@ local function UpdateButtons(list, bagOf, slotOf, on)
   local count = 0
   for _, button in ipairs(list) do
     if on then
-      local link = Link(bagOf(button), slotOf(button))
-      if ns.ShowItemLevel(button, link, true) == true then count = count + 1 end
+      local bag, slot = bagOf(button), slotOf(button)
+      local link = Link(bag, slot)
+      if ns.ShowItemLevel(button, link, true, "bags", bag, slot) == true then count = count + 1 end
     else
       ns.HideLevel(button)
     end
