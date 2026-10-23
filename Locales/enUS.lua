@@ -1,0 +1,7 @@
+local _, ns = ...
+
+-- Keys are the English texts; missing translations fall back to the key.
+ns.L = setmetatable({}, { __index = function(_, k) return k end })
+
+-- Texts whose key is not the English text
+ns.L["Item level (short)"] = "Item level"
