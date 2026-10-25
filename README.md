@@ -1,4 +1,4 @@
-# Geardon 1.2.1 (WoW Forever)
+# Geardon 1.2.2 (WoW Forever)
 
 Gegenstandsstufe (Itemlevel) für World of Warcraft: Forever (Client "Camelot", Interface 16001). In Forever speichert ein Gegenstand nur Gegenstandsstufe, Qualität und Werteverteilung, die Werte selbst berechnet das Spiel daraus. Die Gegenstandsstufe ist damit die Stärke eines Gegenstands.
 
