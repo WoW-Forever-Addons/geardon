@@ -1,6 +1,6 @@
 # Changes
 
-## 1.2.3
+## 1.2.4
 
 - **Stats for your class:** the upgrade arrow weighs an item's stats for your class and talent tree, the same way Questdon suggests quest rewards. Armor, rings, necks and trinkets get the arrow when their stats are worth more to you than yours, also at a lower item level, and none when they are worth less. The same for the melee weapons and staves of hunters, mages, priests, warlocks and caster druids and shamans; other weapons, ranged weapons and wands still go by item level. The tooltip shows the value against yours.
 
