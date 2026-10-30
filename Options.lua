@@ -31,6 +31,7 @@ local PAGES = {
     { key = "behindMarker", name = "Mark slots behind your level", tip = "An equipped item whose item level is far below your level gets its number in red. The tooltip of your average on the character frame and the gear check (/gd check) list these slots.", parent = "showCharacter", onChange = Refresh },
     { key = "behindLevels", kind = "slider", name = "Behind: levels below yours", tip = "An item counts as behind when its item level is more than this many below your level. Default 8: at level 30, items below item level 22.", min = 3, max = 20, step = 1, format = Points, parent = "behindMarker", onChange = Refresh },
     { key = "showInspect", name = "Inspect frame", tip = "Item level per slot and the average of the inspected player. Blizzard's Forever inspect frame shows neither.", onChange = Refresh },
+    { key = "inspectMine", name = "Your average on the inspect frame", tip = "Your own average item level as a grey note next to that of the inspected player.", parent = "showInspect", onChange = Refresh },
     { key = "showBags", name = "Bags", tip = "Item level on weapons and armor in your bags.", onChange = Refresh },
     { key = "bagAddons", name = "Baganator and Bagnon", tip = "Also in the bags of Baganator and Bagnon. Baganator: choose Geardon in its icon corner options and as its upgrade plugin.", parent = "showBags", onChange = Refresh },
     { key = "boeMarker", name = "BoE in bags", tip = "BoE in the top right corner of items that bind when equipped and are not bound yet.", parent = "showBags", onChange = Refresh },
@@ -41,6 +42,7 @@ local PAGES = {
     { key = "showRewards", name = "Quest rewards", tip = "Item level on quest rewards, at the quest giver and in the quest details of the map.", onChange = Refresh },
     { header = "Chat" },
     { key = "chatChange", name = "Chat line when your item level changes", tip = "One line in the chat when your average changes, with the slots that changed, e.g. Item level 24.3 -> 25.1 (Head +6). Not on login; quick swaps make one line.", onChange = Refresh },
+    { key = "chatUpgrade", name = "Chat line for an upgrade in your bags", tip = "One line in the chat when an upgrade comes into your bags (loot, quest, mail, trade), with the slot and the gain, e.g. Upgrade in your bags: [Helm] (Head +6). Once per item, not on login, never for gear you swap.", onChange = Refresh },
   } },
   { title = "Look", tip = "Position, size and colour of the numbers.", items = {
     { header = "All places" },
@@ -61,11 +63,14 @@ local PAGES = {
     { header = "Arrow" },
     { key = "upgradeArrow", name = "Green arrow on upgrades", tip = "Bags, bank, loot and quest rewards: a green arrow when the item has a higher item level than what you wear in that slot and you can wear it now (class, armor type, level). Rings, trinkets and one-hand weapons compare with the weaker of your two.", onChange = Refresh },
     { key = "arrowUncertain", name = "Yellow arrow when unsure", tip = "In Forever the stats come from item level and quality. A higher item level of a lower quality than yours may be weaker: yellow arrow, the tooltip says why. The same when the item would replace a piece of a set whose bonus you have. Off: no arrow then.", parent = "upgradeArrow", onChange = Refresh },
+    { key = "arrowSoon", name = "Grey arrow: wearable soon", tip = "A grey arrow on upgrades you can wear in a few levels, so you keep them. The tooltip names the level.", parent = "upgradeArrow", onChange = Refresh },
+    { key = "soonLevels", kind = "slider", name = "Soon: levels above yours", tip = "How many levels above yours still count as soon. Default 3.", min = 1, max = 10, step = 1, format = Points, parent = "arrowSoon", onChange = Refresh },
     { header = "What counts" },
     { key = "arrowWeaponMatch", name = "Only weapon types you use", tip = "A weapon gets the arrow only if you wear one of its type now (e.g. a hunter with a polearm: no arrow on swords; a bow, gun or crossbow for a bow). An empty slot takes any weapon.", onChange = Refresh },
     { key = "arrowBestArmor", name = "Only your best armor type", tip = "Armor gets the arrow only in the best type you can wear: from what you know (mail or plate from level 40 for some classes) and what you wear. Off: anything you can wear.", onChange = Refresh },
     { key = "arrowMainStats", name = "Only items with your main stats", tip = "No arrow on items whose stats none of your class's specs use (e.g. Intellect and Spirit for a rogue). Items without stats keep the arrow.", onChange = Refresh },
     { key = "arrowStatValue", name = "By stat value for your class", tip = "Weighs the stats for your class and talent tree, the same way as Questdon's reward suggestion: armor, rings, necks and trinkets get the arrow when their stats are worth more to you than those of your item, also at a lower item level, and none when they are worth less. The same for the melee weapons and staves of hunters, mages, priests, warlocks and caster druids and shamans. Other weapons, ranged weapons and wands go by item level; the stats only settle a different quality.", onChange = Refresh },
+    { key = "arrowPair", name = "One-hand and off-hand against two-hand", tip = "While you wear a two-hand weapon, a one-hand weapon together with the best shield or off-hand item from your bags (or the other way round) gets a yellow arrow when both hands together are higher. The tooltip names the partner.", onChange = Refresh },
   } },
   { title = "Tooltips", tip = "Item level and comparison in item and player tooltips.", items = {
     { header = "Items" },
@@ -105,7 +110,7 @@ end
 local TOOLS = {
   { "Group window", "Show / hide", function() ns.ToggleGroupWindow() end, "Shows or hides the group window. /gd group" },
   { "Inspect group again", "Inspect", function() ns.RescanGroup(true) end, "Forgets inspected values and inspects your group again, out of combat. /gd scan" },
-  { "Gear check", "Show / hide", function() ns.ShowCheck() end, "Slots behind your level, dungeons for your level and bag items worse than yours. Only a list: nothing is sold or deleted. /gd check" },
+  { "Gear check", "Show / hide", function() ns.ShowCheck() end, "Upgrades in your bags, slots behind your level, dungeons for your level and bag items worse than yours with their vendor price. Only a list: nothing is sold, equipped or deleted. /gd check" },
   { "Diagnostics", "Show", function() ns.ShowDiag() end, "Window with a report to copy for bug reports. /gd diag, in the chat: /gd diag chat" },
 }
 for _, t in ipairs(TOOLS) do t[3] = ns.Guard("tool", t[3]) end

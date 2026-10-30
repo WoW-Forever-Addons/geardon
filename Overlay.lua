@@ -21,10 +21,14 @@ end
 
 -- (1.2.0, Daniel 10.10.) Green arrow, or the same arrow in the warning colour
 -- when the upgrade is not sure (other quality, a set bonus at stake).
+-- (1.3.0) check "soon": grey, an upgrade once you have its level.
 local function ArrowLook(tex, check)
   if tex._check == check then return end
   tex._check = check
-  if check then
+  if check == "soon" then
+    if tex.SetDesaturated then pcall(tex.SetDesaturated, tex, true) end
+    if tex.SetVertexColor then pcall(tex.SetVertexColor, tex, 0.75, 0.75, 0.75) end
+  elseif check then
     if tex.SetDesaturated then pcall(tex.SetDesaturated, tex, true) end
     local w = ns.Style and ns.Style.COLORS and ns.Style.COLORS.warning or { 0.95, 0.75, 0.25 }
     if tex.SetVertexColor then pcall(tex.SetVertexColor, tex, w[1], w[2], w[3]) end
@@ -135,7 +139,7 @@ local function GapColor(level)
   return 1, 1, 1
 end
 
--- opts: upgrade (arrow), check (yellow arrow), weak (warning colour), behind
+-- opts: upgrade (arrow), check (yellow arrow), soon (grey arrow, 1.3.0), weak (warning colour), behind
 -- (critical colour), place ("character", "bags", "other"), boe (BoE mark).
 -- level may be nil when only the BoE mark is shown.
 function ns.ShowLevel(button, level, quality, opts)
@@ -161,8 +165,8 @@ function ns.ShowLevel(button, level, quality, opts)
     r, g, b = r + (1 - r) * 0.35, g + (1 - g) * 0.35, b + (1 - b) * 0.35
   end
   o.text:SetTextColor(r, g, b)
-  local arrow = level and opts and opts.upgrade and ns.db and ns.db.upgradeArrow and true or false
-  if arrow then ArrowLook(o.arrow, opts.check and true or false) end
+  local arrow = level and opts and (opts.upgrade or opts.soon) and ns.db and ns.db.upgradeArrow and true or false
+  if arrow then ArrowLook(o.arrow, (not opts.upgrade and "soon") or (opts.check and true or false)) end
   o.arrow:SetShown(arrow)
   SetBoE(o, boe and true or false)
   if not o:IsShown() then o:Show() end
@@ -203,14 +207,14 @@ function ns.ShowItemLevel(button, link, arrow, place, bag, slot)
   local result = false
   local boe = bag and slot and ns.db and ns.db.boeMarker and ns.IsBoE and ns.IsBoE(info, bag, slot) or false
   if ns.IsGear(info) and ns.QualityShown(info.quality) then
-    local up, check = false, false
-    if arrow then up, check = ns.IsUpgrade(info) end
-    opts.upgrade, opts.check, opts.place, opts.boe = up, check, place, boe
+    local up, check, soon = false, false, nil
+    if arrow then up, check, soon = ns.IsUpgrade(info) end
+    opts.upgrade, opts.check, opts.soon, opts.place, opts.boe = up, check, soon and true or false, place, boe
     ns.ShowLevel(button, info.level, info.quality, opts)
     stats.shown = stats.shown + 1
     result = true
   elseif boe then
-    opts.upgrade, opts.check, opts.place, opts.boe = false, false, place, true
+    opts.upgrade, opts.check, opts.soon, opts.place, opts.boe = false, false, false, place, true
     ns.ShowLevel(button, nil, info.quality, opts)
   else
     ns.HideLevel(button)

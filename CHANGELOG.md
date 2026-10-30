@@ -1,5 +1,14 @@
 # Changes
 
+## 1.3.0
+
+- **Wearable soon:** upgrades you can wear in a few levels (3 by default) get a grey arrow, so you keep them; the tooltip names the level.
+- **Upgrades in your bags:** a chat line when an upgrade comes into your bags (loot, quest, mail, trade), e.g. "Upgrade in your bags: [Helm] (Head +6)". Once per item, not on login, never for gear you swap. The gear check (/gd check) lists the best upgrade per slot from your bags at the top.
+- **One-hand and off-hand:** while you wear a two-hand weapon, a one-hand weapon together with the best shield or off-hand item from your bags (or the other way round) gets a yellow arrow when both hands together are higher. The tooltip names the partner.
+- **Unique items:** no arrow on a second copy of a unique ring, trinket or weapon you already wear.
+- **Vendor price:** the bag cleanup of the gear check shows the vendor price of each item and what the whole list is worth.
+- **Inspect:** your own average next to that of the inspected player.
+
 ## 1.2.4
 
 - **Stats for your class:** the upgrade arrow weighs an item's stats for your class and talent tree, the same way Questdon suggests quest rewards. Armor, rings, necks and trinkets get the arrow when their stats are worth more to you than yours, also at a lower item level, and none when they are worth less. The same for the melee weapons and staves of hunters, mages, priests, warlocks and caster druids and shamans; other weapons, ranged weapons and wands still go by item level. The tooltip shows the value against yours.

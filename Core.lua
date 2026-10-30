@@ -11,6 +11,7 @@ ns.defaults = {
   markWeakest = true,
   showAverage = true,         -- your average on the character frame
   showInspect = true,
+  inspectMine = true,         -- (1.3.0) your own average next to the inspected player's
   showBags = true,
   showBank = true,
   showLoot = true,
@@ -22,6 +23,7 @@ ns.defaults = {
   behindMarker = true,        -- (1.2.0) slots far below your level in the critical colour
   behindLevels = 8,           -- (1.2.0) "far below": item level < your level - this
   chatChange = true,          -- (1.2.0) chat line when your average changes
+  chatUpgrade = true,         -- (1.3.0) chat line when an upgrade comes into your bags
   -- look of the numbers on item buttons; (1.2.0) position and size per place:
   -- bags (bags, bank, bag addons: the old keys), character frame, other windows
   numberPosition = "BOTTOM",  -- "BOTTOM", "TOP", "CENTER"
@@ -39,6 +41,9 @@ ns.defaults = {
   arrowBestArmor = false,     -- (1.2.0) arrow only on your best armour type
   arrowMainStats = true,      -- (1.2.0) no arrow on items with none of your class's main stats
   arrowStatValue = true,      -- (1.2.2) the stat value for your class decides (Questdon's weights)
+  arrowPair = true,           -- (1.3.0) one-hand plus off-hand from your bags against your two-hand weapon
+  arrowSoon = true,           -- (1.3.0) grey arrow on upgrades you can wear in a few levels
+  soonLevels = 3,             -- (1.3.0) "a few": at most this many levels above yours
   -- tooltips
   tooltipLevel = true,        -- "Item level 18" when the game does not show it
   tooltipCompare = true,      -- "+3 over equipped (Head 15)"

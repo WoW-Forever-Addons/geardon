@@ -61,6 +61,7 @@ local BLOCK_TEXT = {
   level = "No arrow: you cannot wear it yet.",
   wear = "Your character cannot use it.",
   twohand = "No arrow: it would take your two-hand weapon away.",
+  unique = "No arrow: unique, and you wear it already.",
   weapon = "No arrow: not a weapon type you use.",
   armor = "No arrow: not your best armor type.",
   stats = "No arrow: none of your class's main stats.",
@@ -124,9 +125,16 @@ local function OnItem(tooltip, data)
   end
   if v then
     local wr, wg, wb = Rgb("warning")
-    if v.check then
+    if v.soon then
+      local gr, gg, gb = Rgb("textSecondary")
+      tooltip:AddLine(L["An upgrade from level %d."]:format(v.soon), gr, gg, gb, true)
+    elseif v.check then
       for key in v.check:gmatch("[^+]+") do
         if CHECK_TEXT[key] then tooltip:AddLine(L[CHECK_TEXT[key]], wr, wg, wb, true) end
+      end
+      if v.partner then
+        tooltip:AddLine(L["Together with %s: both hands %s over your two-hand weapon."]:format(v.partner,
+          DiffText(v.pairGain or 0)), wr, wg, wb, true)
       end
     elseif v.note == "statvalue" then
       local gr, gg, gb = Rgb("textSecondary")

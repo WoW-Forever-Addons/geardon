@@ -112,7 +112,8 @@ function ns.ItemInfo(link)
   local _, _, _, equipLoc, _, classID, subclassID = ns.Results(getInstant, link)
   local getInfo = (C_Item and C_Item.GetItemInfo) or GetItemInfo
   -- (1.2.0, Daniel 10.10.) also bindType (14th: 2 = bind on equip) and setID (16th) of GetItemInfo
-  local name, _, quality, baseLevel, reqLevel, _, _, _, _, _, _, _, _, bindType, _, setID = ns.Results(getInfo, link)
+  -- (1.3.0) and sellPrice (11th, copper per item)
+  local name, _, quality, baseLevel, reqLevel, _, _, _, _, _, sellPrice, _, _, bindType, _, setID = ns.Results(getInfo, link)
   if not ns.Str(name) then Request(itemID) return nil end
   local level = ns.Num(ns.Results(C_Item and C_Item.GetDetailedItemLevelInfo or GetDetailedItemLevelInfo, link))
     or ns.Num(baseLevel)
@@ -122,6 +123,7 @@ function ns.ItemInfo(link)
     itemID = itemID, level = level, quality = ns.Num(quality), reqLevel = ns.Num(reqLevel) or 0,
     equipLoc = ns.Str(equipLoc), classID = ns.Num(classID), subclassID = ns.Num(subclassID),
     bindType = ns.Num(bindType), setID = (setID and setID > 0) and setID or nil, link = link,
+    sellPrice = ns.Num(sellPrice) or 0,
   }
   if cacheSize > 3000 then wipe(cache) cacheSize = 0 end
   cache[link] = info
@@ -270,19 +272,20 @@ local function DualWield()
   return ns.Value(rawget(_G, "CanDualWield")) == true
 end
 
--- The slots an item competes for.
+-- The slots an item competes for (shared tables: callers only read them).
+local BOTH_HANDS, MAIN_HAND, RANGED_SLOT = { "MainHandSlot", "SecondaryHandSlot" }, { "MainHandSlot" }, { "RangedSlot" }
 function ns.TargetSlots(equipLoc)
   local t = INVTYPE[equipLoc or ""]
   if type(t) == "table" then return t end
   if t == "WEAPON" then
-    return DualWield() and { "MainHandSlot", "SecondaryHandSlot" } or { "MainHandSlot" }
+    return DualWield() and BOTH_HANDS or MAIN_HAND
   elseif t == "TWOHAND" then
-    return { "MainHandSlot" }
+    return MAIN_HAND
   elseif t == "RANGED" then
     -- Forever has a ranged slot; without one ranged weapons go to the main hand
     local btn = ns.Frame("CharacterRangedSlot")
-    if btn or equipped.RangedSlot then return { "RangedSlot" } end
-    return { "MainHandSlot" }
+    if btn or equipped.RangedSlot then return RANGED_SLOT end
+    return MAIN_HAND
   end
   return nil
 end
@@ -339,10 +342,11 @@ function ns.PlayerLevel()
 end
 
 -- Can you wear it now? (class, armor type, weapon skill and level)
-function ns.CanWear(info)
+-- (1.3.0) ignoreLevel: could you wear it once you have its level?
+function ns.CanWear(info, ignoreLevel)
   if type(info) ~= "table" then return false end
   local level = ns.PlayerLevel()
-  if info.reqLevel and info.reqLevel > level then return false end
+  if info.reqLevel and info.reqLevel > level and not ignoreLevel then return false end
   if C_PlayerInfo and C_PlayerInfo.CanUseItem then
     local v = ns.Value(C_PlayerInfo.CanUseItem, info.itemID)
     if v == false then return false end
@@ -363,10 +367,13 @@ end
 -- Returns nil (no gear, nothing to compare) or a table:
 --   diff, slot, eqLevel, loses2H  as ns.Compare
 --   upgrade = true      arrow wanted
---   check = "quality" | "set" | "quality+set"   unsure: yellow arrow
---   block = "level" | "wear" | "twohand" | "lower" | "weapon" | "armor" | "stats" | "statvalue"   why there is no arrow
+--   check = "quality" | "set" | "quality+set"   unsure: yellow arrow; (1.3.0) "+pair" or "pair": with a partner
+--   partner, pairGain   (1.3.0) the bag item for the other hand and what both hands gain over your two-hand weapon
+--   block = "level" | "wear" | "unique" | "twohand" | "lower" | "weapon" | "armor" | "stats" | "statvalue"   why there is no arrow
 --   note = "quality"    lower item level but higher quality (tooltip hint only)
 --   note = "statvalue"  (1.2.2) an arrow on a lower item level: its stats are worth more to your class
+--   soon = level        (1.3.0) block "level", but an upgrade once you reach that level (option arrowSoon,
+--                       at most soonLevels above yours): grey arrow, tooltip names the level
 ---------------------------------------------------------------------------
 -- into: optional table to fill (reused on hot paths, no garbage per item).
 function ns.Judge(info, into)
@@ -375,7 +382,7 @@ function ns.Judge(info, into)
   if not diff then return nil end
   local v = into or {}
   v.diff, v.slot, v.eqLevel, v.loses2H = diff, slot, eqLevel, loses2H
-  v.upgrade, v.check, v.block, v.note = nil, nil, nil, nil
+  v.upgrade, v.check, v.block, v.note, v.soon, v.partner, v.pairGain = nil, nil, nil, nil, nil, nil, nil
   local q, eqQ = info.quality, ns.ReplacedQuality(info, slot)
   local higherQ = q and eqQ and q > eqQ
   local lowerQ = q and eqQ and q < eqQ
@@ -387,16 +394,30 @@ function ns.Judge(info, into)
   local weapon = info.classID == 2 and not (ns.StatWeapon and ns.StatWeapon(info))
   local statsUp = sc == 1 and diff <= 0 and (not weapon or higherQ)
   local statsDown = sc == -1 and (not weapon or lowerQ)
-  if info.reqLevel and info.reqLevel > ns.PlayerLevel() then
+  if loses2H then sc = nil end
+  -- (1.3.0) instead of your two-hand weapon, together with the best item for the other hand in your bags
+  local partner
+  if loses2H and ns.PairPartner then
+    partner = ns.PairPartner(info)
+    if partner and not ((info.level + partner.info.level) / 2 > (eqLevel or 0)) then partner = nil end
+  end
+  -- one item's stats against the whole two-hand weapon say nothing: the pair is the yellow arrow's question
+  if partner then statsUp, statsDown = false, false end
+  local tooLow = info.reqLevel and info.reqLevel - ns.PlayerLevel() or 0
+  -- (1.3.0) a few levels too low: judged as if you had the level, then marked "soon"
+  local soon = tooLow > 0 and ns.db and ns.db.arrowSoon ~= false and tooLow <= (tonumber(ns.db.soonLevels) or 3)
+  if tooLow > 0 and not soon then
     v.block = "level"
-  elseif not ns.CanWear(info) then
+  elseif not ns.CanWear(info, soon) then
     v.block = "wear"
-  elseif loses2H then
+  elseif ns.UniqueWorn and ns.UniqueWorn(info, slot) then
+    v.block = "unique" -- (1.3.0) a copy of this unique item is in your other slot
+  elseif loses2H and not partner then
     v.block = "twohand" -- a one-hand or off-hand item alone would take your two-hand weapon away
-  elseif not (diff > 0 or (diff == 0 and higherQ) or statsUp) then
+  elseif not (diff > 0 or (diff == 0 and higherQ) or statsUp or partner) then
     v.block = "lower"
     if higherQ and diff < 0 then v.note = "quality" end
-  elseif ns.WeaponTypeOK and not ns.WeaponTypeOK(info, slot) then
+  elseif not partner and ns.WeaponTypeOK and not ns.WeaponTypeOK(info, slot) then
     v.block = "weapon"
   elseif ns.ArmorTypeOK and not ns.ArmorTypeOK(info) then
     v.block = "armor"
@@ -413,16 +434,26 @@ function ns.Judge(info, into)
     if unsure and set then v.check = "quality+set"
     elseif unsure then v.check = "quality"
     elseif set then v.check = "set" end
+    if partner then
+      v.check = v.check and (v.check .. "+pair") or "pair"
+      v.partner, v.pairGain = partner.link, (info.level + partner.info.level) / 2 - (eqLevel or 0)
+    end
+    if soon then v.upgrade, v.block, v.soon = nil, "level", info.reqLevel end
   end
   return v
 end
 
 -- Upgrade arrow: higher than what you wear and wearable now. Second value:
 -- true when the arrow is the yellow "check" one.
+-- (1.3.0) Third value: the level from which it is an upgrade (grey arrow), when it is one soon.
 local scratch = {}
 function ns.IsUpgrade(info)
   local v = ns.Judge(info, scratch)
-  if not (v and v.upgrade) then return false end
+  if not (v and v.upgrade) then
+    local soon = v and v.soon
+    if soon and v.check and ns.db and ns.db.arrowUncertain == false then soon = nil end
+    return false, false, soon
+  end
   if v.check then
     if ns.db and ns.db.arrowUncertain == false then return false end
     return true, true
@@ -444,6 +475,20 @@ function ns.FormatLevel(level)
   if not level then return "" end
   if math.abs(level - math.floor(level + 0.5)) < 0.05 then return ("%d"):format(math.floor(level + 0.5)) end
   return Decimal(("%.1f"):format(level))
+end
+
+-- (1.3.0) Money: the game's coin text with icons, else "1g 2s 3c".
+function ns.Money(copper)
+  copper = math.floor(ns.Num(copper) or 0)
+  local fn = rawget(_G, "GetCoinTextureString") or (C_CurrencyInfo and C_CurrencyInfo.GetCoinTextureString)
+  local s = ns.Str(ns.Call(fn, copper))
+  if s then return s end
+  local g, sv, c = math.floor(copper / 10000), math.floor(copper / 100) % 100, copper % 100
+  local out = {}
+  if g > 0 then out[#out + 1] = g .. "g" end
+  if sv > 0 then out[#out + 1] = sv .. "s" end
+  if c > 0 or #out == 0 then out[#out + 1] = c .. "c" end
+  return table.concat(out, " ")
 end
 
 -- Averages: always one decimal, so a list of players lines up (23,0 / 22,4).

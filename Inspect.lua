@@ -71,8 +71,14 @@ local function AvgText()
   return avgFrame
 end
 
-local function SetAvg(f, avg, complete)
-  ns.SetPlate(f, avg, not complete and L["loading"] or nil)
+-- (1.3.0) Once complete, your own average as a grey note ("yours 20.6"), not when you inspect yourself.
+local function SetAvg(f, avg, complete, unit)
+  local note = not complete and L["loading"] or nil
+  if complete and ns.db.inspectMine and not (unit and ns.Value(UnitIsUnit, unit, "player") == true) then
+    local mine = ns.PlayerAverage()
+    if mine then note = L["yours %s"]:format(ns.FormatAverage(mine)) end
+  end
+  ns.SetPlate(f, avg, note)
 end
 
 local function InspectUnit()
@@ -106,7 +112,7 @@ local function Update(self)
   local f = AvgText()
   if f then
     if on and avg then
-      SetAvg(f, avg, complete)
+      SetAvg(f, avg, complete, unit)
       f:Show()
     else
       f:Hide()

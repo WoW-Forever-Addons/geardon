@@ -83,6 +83,10 @@ function ns.DiagLines()
   out[#out + 1] = ("upgrade: class %s, best armour %s; %s"):format(tostring(ns.PlayerClass and ns.PlayerClass()),
     tostring(ns.BestArmorSubclass and ns.BestArmorSubclass()), Kv(ns.upgradeStats))
   out[#out + 1] = "bag addons: " .. Kv(ns.bagAddonStats)
+  -- (1.3.0)
+  local db = ns.db or {}
+  out[#out + 1] = ("1.3.0: soon %s (%s levels), pair %s, chat upgrade %s, inspect mine %s"):format(tostring(db.arrowSoon),
+    tostring(db.soonLevels), tostring(db.arrowPair), tostring(db.chatUpgrade), tostring(db.inspectMine))
   out[#out + 1] = ("gear check: %s; dungeons %s; chat %s"):format(Kv(ns.checkStats), Kv(ns.dungeonStats), Kv(ns.changeStats))
   local watchers = {}
   for key in pairs(ns.Watchers()) do watchers[#watchers + 1] = key end

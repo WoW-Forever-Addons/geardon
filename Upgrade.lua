@@ -463,6 +463,115 @@ function ns.SetPieceSlots()
 end
 
 ---------------------------------------------------------------------------
+-- (1.3.0) One-hand and off-hand instead of a two-hand weapon. An item for one
+-- hand alone would take your two-hand weapon away; together with the best
+-- item for the other hand from your bags it may be more (the average counts
+-- both hands, the two-hand weapon twice). Then it gets the yellow arrow and
+-- the tooltip names the partner: giving up a two-hand weapon is your choice.
+-- The partner must be wearable now; the weapon types you use do not count here
+-- (you would change them). Best two per hand, read once per bag change.
+-- Option arrowPair (on).
+---------------------------------------------------------------------------
+local MAIN_HAND = { INVTYPE_WEAPON = true, INVTYPE_WEAPONMAINHAND = true }
+local OFF_HAND = { INVTYPE_SHIELD = true, INVTYPE_HOLDABLE = true, INVTYPE_WEAPONOFFHAND = true }
+local DUAL_ONLY = { INVTYPE_WEAPONOFFHAND = true } -- an off-hand weapon needs dual wield
+local hands = { main = {}, off = {} }
+local handsVer, handsReads
+
+local function Keep(list, g)
+  if not list[1] or g.info.level > list[1].info.level then list[1], list[2] = g, list[1]
+  elseif not list[2] or g.info.level > list[2].info.level then list[2] = g end
+end
+
+local function ReadHands()
+  local gear = ns.BagGear and ns.BagGear() or {}
+  local reads = ns.checkStats and ns.checkStats.indexReads
+  if handsVer == ns.version and handsReads == reads then return end
+  wipe(hands.main) wipe(hands.off)
+  local dual = ns.Value(rawget(_G, "CanDualWield")) == true
+  for _, g in ipairs(gear) do
+    local loc = g.info.equipLoc
+    -- a partner must be wearable now and have one of your main stats (or none at all)
+    if g.info.level and (MAIN_HAND[loc] or OFF_HAND[loc]) and ns.CanWear(g.info) and ns.MainStatsOK(g.info) ~= false
+      and ns.ArmorTypeOK(g.info) then
+      if MAIN_HAND[loc] then Keep(hands.main, g) end
+      if (OFF_HAND[loc] and (dual or not DUAL_ONLY[loc])) or (dual and loc == "INVTYPE_WEAPON") then Keep(hands.off, g) end
+    end
+  end
+  handsVer, handsReads = ns.version, reads
+end
+
+-- The bag item ({ link, info, bag, slot }) for the other hand, or nil.
+function ns.PairPartner(info)
+  if type(info) ~= "table" or not (ns.db and ns.db.arrowPair ~= false) then return nil end
+  local loc = info.equipLoc
+  if not (MAIN_HAND[loc] or OFF_HAND[loc]) then return nil end
+  if DUAL_ONLY[loc] and ns.Value(rawget(_G, "CanDualWield")) ~= true then return nil end
+  ReadHands()
+  local list = OFF_HAND[loc] and hands.main or hands.off
+  for i = 1, 2 do
+    local g = list[i]
+    if g and g.link ~= info.link then return g end
+  end
+  return nil
+end
+
+-- The best items per hand as one string: when it changes while you wear a
+-- two-hand weapon, arrows of other bag items may change (Check.lua bumps the version).
+function ns.PairSignature()
+  local mh = ns.Equipped().MainHandSlot
+  if not (ns.db and ns.db.arrowPair ~= false and mh and mh.equipLoc == "INVTYPE_2HWEAPON") then return "" end
+  ReadHands()
+  local m, o = hands.main, hands.off
+  return (m[1] and m[1].link or "") .. "|" .. (m[2] and m[2].link or "") .. "|" .. (o[1] and o[1].link or "") .. "|"
+    .. (o[2] and o[2].link or "")
+end
+
+---------------------------------------------------------------------------
+-- (1.3.0) Unique items. Two copies of a unique ring, trinket or weapon cannot
+-- be worn together: a unique item you already wear in the other slot gets no
+-- arrow. The game says it with C_Item.GetItemUniquenessByID, else the item's
+-- tooltip has the line "Unique" (ITEM_UNIQUE) or "Unique-Equipped"
+-- (ITEM_UNIQUE_EQUIPPABLE). Unknown: no block. Asked only when a copy is worn.
+---------------------------------------------------------------------------
+local function IsUnique(info)
+  if info.unique ~= nil then return info.unique end
+  local u
+  if C_Item and type(C_Item.GetItemUniquenessByID) == "function" and info.itemID then
+    local isUnique = ns.Value(C_Item.GetItemUniquenessByID, info.itemID)
+    if isUnique == true then u = true elseif isUnique == false then u = false end
+  end
+  if not u and C_TooltipInfo and type(C_TooltipInfo.GetHyperlink) == "function" and info.link then
+    local data = ns.Value(C_TooltipInfo.GetHyperlink, info.link)
+    local lines = type(data) == "table" and data.lines
+    if type(lines) == "table" and ns.Usable(lines) then
+      local a, b = ns.Str(rawget(_G, "ITEM_UNIQUE")), ns.Str(rawget(_G, "ITEM_UNIQUE_EQUIPPABLE"))
+      u = false
+      for _, line in ipairs(lines) do
+        local text = type(line) == "table" and ns.Str(line.leftText)
+        if text and (text == a or text == b) then u = true break end
+      end
+    end
+  end
+  stats.uniqueChecks = (stats.uniqueChecks or 0) + 1
+  if u ~= nil then info.unique = u end
+  return u
+end
+
+-- true when the item is unique and a copy of it is worn in another of the slots it goes to.
+function ns.UniqueWorn(info, slot)
+  if type(info) ~= "table" or not info.itemID then return false end
+  local eq = ns.Equipped()
+  for _, name in ipairs(ns.TargetSlots(info.equipLoc) or {}) do
+    local e = eq[name]
+    if name ~= slot and e and e.link and tonumber(e.link:match("item:(%d+)")) == info.itemID then
+      return IsUnique(info) == true
+    end
+  end
+  return false
+end
+
+---------------------------------------------------------------------------
 -- (7) Bind on equip, not yet bound: GetItemInfo's bind type 2 (LE_ITEM_BIND_ON_EQUIP),
 -- and the item in that bag slot is not bound (C_Item.IsBound, else the
 -- tooltip data: ITEM_SOULBOUND). Unknown: no mark.
