@@ -88,6 +88,9 @@ function ns.DiagLines()
   out[#out + 1] = ("1.3.0: soon %s (%s levels), pair %s, chat upgrade %s, inspect mine %s"):format(tostring(db.arrowSoon),
     tostring(db.soonLevels), tostring(db.arrowPair), tostring(db.chatUpgrade), tostring(db.inspectMine))
   out[#out + 1] = ("gear check: %s; dungeons %s; chat %s"):format(Kv(ns.checkStats), Kv(ns.dungeonStats), Kv(ns.changeStats))
+  -- (Leistungsrunde 6) kept judgements: computed, taken from the memo, not kept (data missing), DonData notices
+  out[#out + 1] = ("judge: %s; kept now %s; DonData notices %s"):format(Kv(ns.judgeStats), tostring(ns.JudgeMemoOK and ns.JudgeMemoOK()),
+    tostring(ns.donDataNotices or 0))
   local watchers = {}
   for key in pairs(ns.Watchers()) do watchers[#watchers + 1] = key end
   table.sort(watchers)
@@ -153,5 +156,12 @@ function ns.ShowDiag()
 end
 
 ns.OnInit(function()
-  if ns.Style then ns.Style.onError = function(where, err) ns.RecordError("kit:" .. tostring(where), err) end end
+  -- the kit is shared (DonCore): keep the handler of an addon loaded earlier and call it as well
+  if ns.Style then
+    local before = ns.Style.onError
+    ns.Style.onError = function(where, err)
+      ns.RecordError("kit:" .. tostring(where), err)
+      if before then pcall(before, where, err) end
+    end
+  end
 end)

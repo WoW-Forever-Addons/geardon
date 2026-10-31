@@ -1,5 +1,14 @@
 # Changes
 
+## 1.4.0
+
+- **No new required addon.** With **DonData** installed (it comes with Questdon and Leveldon) Geardon uses its gear score; without it Geardon works as before.
+- **One gear score with Questdon:** with DonData the upgrade arrow weighs every item, weapons too, by its value for your class and talent tree: the stats, the armor and the weapon damage. Wands go by damage first, ranged weapons of classes other than hunters by their stats. The value line in the tooltip shows this score, and Questdon's reward advice agrees with Geardon's arrow. The option now reads "By stat value for your class".
+- **Rings, trinkets and one-hand weapons** compare against the weaker of your two by value.
+- **Dungeons for your level** come from DonData, also without Questdon.
+- **Lighter:** a tooltip judges an item once and remembers it until your gear, level or talents change; events of units Geardon does not need (nameplates in a crowd) are dropped early; the group timer only runs while there is something to do.
+- **Shared base:** options and window style come from DonCore, the common base of the Don addons. Nothing changes for you.
+
 ## 1.3.0
 
 - **Wearable soon:** upgrades you can wear in a few levels (3 by default) get a grey arrow, so you keep them; the tooltip names the level.

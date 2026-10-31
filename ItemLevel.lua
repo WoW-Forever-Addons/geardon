@@ -173,9 +173,15 @@ local equipped, equippedDirty = {}, true  -- slotName -> { level, quality, link,
 -- of your gear yet: an empty or incomplete read is repeated (at most once a
 -- second) instead of being kept until the next gear change.
 local lastIncomplete = 0
+-- (Leistungsrunde 6) what the last read gave per slot (link, level), to tell whether a new read changed anything, and
+-- whether an item of yours is still loading (a judgement against it is not kept, see ns.Judge)
+local wasLink, wasLevel = {}, {}
+local equippedPending = true
 local function ReadEquipped()
+  wipe(wasLink) wipe(wasLevel)
+  for name, e in pairs(equipped) do wasLink[name], wasLevel[name] = e.link, e.level or false end
   wipe(equipped)
-  local items, missing = 0, 0
+  local items, missing, pending, changed = 0, 0, 0, false
   for _, name in ipairs(ns.SLOT_ORDER) do
     local id = ns.SLOT[name]
     local link = id and ns.Str(ns.Call(GetInventoryItemLink, "player", id))
@@ -192,12 +198,17 @@ local function ReadEquipped()
         classID = info and info.classID, subclassID = info and info.subclassID, setID = info and info.setID,
         pending = info == nil or level == nil }
       items = items + 1
+      if info == nil or level == nil then pending = pending + 1 end
+      if wasLink[name] ~= link or wasLevel[name] ~= (level or false) then changed = true end
     elseif id and ns.Call(GetInventoryItemTexture, "player", id) ~= nil then
       missing = missing + 1 -- an item is there, its link not yet
     end
   end
+  for name in pairs(wasLink) do if not equipped[name] then changed = true end end
+  equippedPending = missing > 0 or pending > 0
   equippedDirty = items == 0 or missing > 0
   if equippedDirty then lastIncomplete = ns.Num(ns.Value(GetTime)) or 0 end
+  return changed
 end
 
 -- Goes up whenever arrows or numbers may change for the same item (gear,
@@ -217,17 +228,23 @@ function ns.Equipped()
     -- a read that came back empty or incomplete is tried again after a second
     if next(equipped) == nil and lastIncomplete > 0 and now - lastIncomplete < 1 then return equipped end
     local before = next(equipped) ~= nil
-    ReadEquipped()
-    if not before and next(equipped) ~= nil then ns.BumpVersion() end
+    -- (Leistungsrunde 6) also when a read finds other links or levels than the last one (an item that finished
+    -- loading, an upgrade seen through the item location): kept judgements are of the old gear
+    local changed = ReadEquipped()
+    if (not before and next(equipped) ~= nil) or (before and changed) then ns.BumpVersion() end
   end
   return equipped
+end
+-- true when your gear is read and none of it is still loading
+function ns.EquippedComplete()
+  ns.Equipped()
+  return not equippedDirty and not equippedPending
 end
 function ns.MarkEquippedDirty() equippedDirty = true end
 ns.On("PLAYER_EQUIPMENT_CHANGED", function() equippedDirty = true end)
 ns.On("PLAYER_ENTERING_WORLD", function() equippedDirty = true lastIncomplete = 0 ns.BumpVersion() end)
-ns.On("UNIT_INVENTORY_CHANGED", function(_, unit)
-  if unit == "player" then equippedDirty = true end
-end)
+-- (D16, 31.10.2026) only "player": Core.lua drops the other units before any protected call
+ns.On("UNIT_INVENTORY_CHANGED", function() equippedDirty = true end, { player = true })
 ns.On("GET_ITEM_INFO_RECEIVED", function()
   -- only when one of your own items was still loading do the arrows change
   for _, e in pairs(equipped) do
@@ -376,11 +393,82 @@ end
 --                       at most soonLevels above yours): grey arrow, tooltip names the level
 ---------------------------------------------------------------------------
 -- into: optional table to fill (reused on hot paths, no garbage per item).
+-- (Leistungsrunde 6, offen/sonstiges.md "Judge-Merker") A judgement is kept per link until the version goes up
+-- (gear, level, talents, skills, options, a loading screen, DonData's "gear" notice) or the options table changes;
+-- at most 500, then all are dropped. Not kept: a judgement that read something not known yet (your gear or its
+-- tooltip data still loading, unknown stats or value, a unique flag, bag items for the pair still loading), one during
+-- which the version went up, and any with DonDataAPI 3 that gives no notices (ns.JudgeMemoOK). A one-hand item
+-- against your two-hand weapon is kept only while the bag index is the same (its partner comes from your bags).
+-- Without into the kept table itself is returned: callers only read it; with into it is copied there.
+local MEMO_MAX = 500
+local memo, memoN, memoVer, memoDb = {}, 0, nil, nil
+local NONE = {} -- kept "no judgement" (no slot to compare with)
+local judgeStats = { computed = 0, hits = 0, notKept = 0, wipes = 0 }
+ns.judgeStats = judgeStats
+local incomplete = false
+function ns.JudgeIncomplete() incomplete = true end
+function ns.ForgetJudge(link)
+  if link and memo[link] then memo[link] = nil memoN = memoN - 1 end
+end
+local FIELDS = { "diff", "slot", "eqLevel", "loses2H", "upgrade", "check", "block", "note", "soon", "partner", "pairGain" }
+local function CopyInto(src, dst)
+  for i = 1, #FIELDS do local k = FIELDS[i] dst[k] = src[k] end
+  return dst
+end
+local function BagReads() return ns.checkStats and ns.checkStats.indexReads end
+
+local Compute
 function ns.Judge(info, into)
   if not ns.IsGear(info) then return nil end
+  local link = info.link
+  local keep = link ~= nil and ns.JudgeMemoOK ~= nil and ns.JudgeMemoOK()
+  if keep then
+    if memoVer ~= ns.version or memoDb ~= ns.db then
+      if memoN > 0 then wipe(memo) end
+      memoN, memoVer, memoDb = 0, ns.version, ns.db
+    end
+    local m = memo[link]
+    if m and m.reads then
+      if ns.BagGear then ns.BagGear() end -- the index as it is now (it reads the bags again after a change)
+      if m.reads ~= BagReads() or memoVer ~= ns.version then m = nil end
+    end
+    if m then
+      judgeStats.hits = judgeStats.hits + 1
+      if m == NONE then return nil end
+      if into then return CopyInto(m, into) end
+      return m
+    end
+  end
+  local ver = ns.version
+  incomplete = false
+  local v = Compute(info, into or {})
+  judgeStats.computed = judgeStats.computed + 1
+  if keep then
+    if not incomplete and ns.version == ver and memoVer == ver and ns.EquippedComplete() and ns.version == ver then
+      if memoN >= MEMO_MAX then wipe(memo) memoN = 0 judgeStats.wipes = judgeStats.wipes + 1 end
+      local k = NONE
+      if v then
+        k = into and CopyInto(v, {}) or v
+        if v.loses2H then k.reads = BagReads() end
+      end
+      if not memo[link] then memoN = memoN + 1 end
+      memo[link] = k
+    else
+      judgeStats.notKept = judgeStats.notKept + 1
+    end
+  end
+  return v
+end
+
+function Compute(info, v)
   local diff, slot, eqLevel, loses2H = ns.Compare(info)
   if not diff then return nil end
-  local v = into or {}
+  -- (1.4.0, Kritikrunde) with DonData's judgement a ring, trinket or one-hand weapon goes against the weaker of your two
+  -- by value, not by item level (the same slot Questdon's reward glow takes)
+  if not loses2H and ns.WeakerByValue then
+    local s2, lv2 = ns.WeakerByValue(info, slot)
+    if s2 and s2 ~= slot then slot, eqLevel, diff = s2, lv2, info.level - lv2 end
+  end
   v.diff, v.slot, v.eqLevel, v.loses2H = diff, slot, eqLevel, loses2H
   v.upgrade, v.check, v.block, v.note, v.soon, v.partner, v.pairGain = nil, nil, nil, nil, nil, nil, nil
   local q, eqQ = info.quality, ns.ReplacedQuality(info, slot)
@@ -392,6 +480,9 @@ function ns.Judge(info, into)
   -- or staff is a stat weapon (ns.StatWeapon) and goes by its stats like armor
   local sc = ns.StatCompare and ns.StatCompare(info, slot)
   local weapon = info.classID == 2 and not (ns.StatWeapon and ns.StatWeapon(info))
+  -- (1.4.0, Daniel 31.10.2026) with DonData's judgement (DonDataAPI 3) the weapon's DPS is in the value: weapons go by
+  -- it like armor, the item level only breaks a tie
+  if sc ~= nil and ns.SharedGear and ns.SharedGear() then weapon = false end
   local statsUp = sc == 1 and diff <= 0 and (not weapon or higherQ)
   local statsDown = sc == -1 and (not weapon or lowerQ)
   if loses2H then sc = nil end

@@ -300,7 +300,19 @@ local function TryDirect(now)
   return false
 end
 
+-- (D16, 31.10.2026) The half-second ticker runs only while there is work: in a
+-- group, an inspect waiting for its answer, or a request for the player under
+-- the mouse or your target. Wake() starts it again.
+local ticker
+local function Idle()
+  return not pending and not direct[1] and not direct[2] and not InGroup()
+end
+
 local function Tick()
+  if Idle() then
+    if ticker then ticker:Cancel() ticker = nil end
+    return
+  end
   local now = Now()
   if pending then
     if now - pending.t > INSPECT_TIMEOUT then
@@ -335,6 +347,13 @@ local function Tick()
       return
     end
   end
+end
+
+-- (Leistungsrunde 6, tests and diag) is the half-second ticker running?
+function ns.GroupTicking() return ticker ~= nil end
+
+local function Wake()
+  if not ticker and not Idle() then ticker = ns.NewTicker(0.5, Tick) end
 end
 
 local function ReadPending()
@@ -387,22 +406,30 @@ local function RequestDirect(slot, unit)
   if not guid then return end
   direct[slot] = { guid = guid, unit = unit, t = now }
   TryDirect(now)
+  Wake()
 end
 ns.On("UPDATE_MOUSEOVER_UNIT", function() RequestDirect(1, "mouseover") end)
 ns.On("PLAYER_TARGET_CHANGED", function() RequestDirect(2, "target") end)
 
+-- (D16, 31.10.2026) only group members and the units an inspect can come from
+-- (mouseover, target, focus): the event fires for every unit (nameplates in a
+-- crowd), the others are dropped in Core.lua before any protected call.
+local INVENTORY_UNITS = { mouseover = true, target = true, focus = true }
+for i = 1, 40 do INVENTORY_UNITS["raid" .. i] = true end
+for i = 1, 4 do INVENTORY_UNITS["party" .. i] = true end
 ns.On("UNIT_INVENTORY_CHANGED", function(_, unit)
-  if type(unit) ~= "string" or not ns.Usable(unit) or unit == "player" then return end
+  if next(levels) == nil then return end
   local guid = ns.Value(UnitGUID, unit)
   local e = guid and levels[guid]
   if e and e.src == "inspect" then e.stale = true end -- inspect again, keep showing the old value
-end)
+end, INVENTORY_UNITS)
 
 function ns.RescanGroup(verbose)
   for _, e in pairs(levels) do if e.src == "inspect" then e.stale = true end end
   wipe(failed)
   nextInspect = 0
   Request()
+  Wake()
   if verbose then ns.Print(L["Inspecting your group again (out of combat, one player at a time)."]) end
 end
 
@@ -427,13 +454,14 @@ local function RosterChanged()
     nextInspect = math.max(nextInspect, Now() + 5)
   end
   if ns.UpdateGroupWindow then ns.UpdateGroupWindow() end
+  Wake()
 end
 
 ns.OnInit(function()
   if C_ChatInfo and C_ChatInfo.RegisterAddonMessagePrefix then
     stats.prefix = pcall(C_ChatInfo.RegisterAddonMessagePrefix, PREFIX) and "ok" or "failed"
   end
-  ns.NewTicker(0.5, Tick)
+  Wake()
 end)
 ns.On("GROUP_ROSTER_UPDATE", RosterChanged)
 ns.On("PLAYER_ENTERING_WORLD", function() ns.After(3, RosterChanged) end)

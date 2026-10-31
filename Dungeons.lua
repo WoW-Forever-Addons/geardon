@@ -47,6 +47,12 @@ local stats = { source = "table" }
 ns.dungeonStats = stats
 
 local function DungeonName(inst)
+  -- (31.10.2026) DonData's name (DonDataAPI 2) when it is there
+  local api = rawget(_G, "DonDataAPI")
+  if type(api) == "table" and type(api.DungeonName) == "function" then
+    local ok, name = pcall(api.DungeonName, inst)
+    if ok and type(name) == "string" and name ~= "" and name ~= "?" then return name end
+  end
   local d = DUNGEONS[inst]
   if not d then return tostring(inst) end
   if d[3] and C_Map and type(C_Map.GetMapInfo) == "function" then
@@ -58,12 +64,16 @@ local function DungeonName(inst)
 end
 
 -- min, max, source ("Questdon" or "table")
+-- (31.10.2026) DonData's range first (DonDataAPI 2, the same answer as Questdon's, also without Questdon), then
+-- QuestdonAPI (an older DonData), then the table here; source stays "Questdon" (the range of the Don data)
 function ns.DungeonRange(inst)
-  local api = rawget(_G, "QuestdonAPI")
-  if type(api) == "table" and type(api.DungeonLevelRange) == "function" then
-    local ok, lo, hi = pcall(api.DungeonLevelRange, inst)
-    lo, hi = ok and ns.Num(lo), ok and ns.Num(hi)
-    if lo and lo > 0 then return lo, (hi and hi >= lo) and hi or lo, "Questdon" end
+  for _, name in ipairs({ "DonDataAPI", "QuestdonAPI" }) do
+    local api = rawget(_G, name)
+    if type(api) == "table" and type(api.DungeonLevelRange) == "function" then
+      local ok, lo, hi = pcall(api.DungeonLevelRange, inst)
+      lo, hi = ok and ns.Num(lo), ok and ns.Num(hi)
+      if lo and lo > 0 then return lo, (hi and hi >= lo) and hi or lo, "Questdon" end
+    end
   end
   local d = DUNGEONS[inst]
   if d then return d[1], d[2], "table" end

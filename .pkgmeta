@@ -1,8 +1,5 @@
 package-as: Geardon
 
-optional-dependencies:
-  - dondata
-
 manual-changelog:
   filename: CHANGELOG.md
   markup-type: markdown

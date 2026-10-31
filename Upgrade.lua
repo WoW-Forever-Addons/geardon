@@ -11,6 +11,14 @@ local L = ns.L
 local stats = { statsApi = 0, statsTooltip = 0, statsNone = 0, setChecks = 0, boeChecks = 0 }
 ns.upgradeStats = stats
 
+-- (Leistungsrunde 6) something a judgement needs is not known yet (an item or its stats still loading): ns.Judge
+-- does not keep that judgement
+local function Unknown() if ns.JudgeIncomplete then ns.JudgeIncomplete() end end
+-- a stats function exists: its silence means "not loaded yet", not "this client cannot say"
+local function StatsApi()
+  return (C_Item and type(C_Item.GetItemStats) == "function") or type(rawget(_G, "GetItemStats")) == "function"
+end
+
 local playerClass
 local function PlayerClass()
   if playerClass then return playerClass end
@@ -232,6 +240,8 @@ function ns.ItemStats(info, lines)
     if t then
       stats.statsTooltip = stats.statsTooltip + 1
       info.stats = t
+      -- (Leistungsrunde 6) a judgement kept with the stats unknown is of the old state
+      if ns.ForgetJudge then ns.ForgetJudge(info.link) end
       return t
     end
   end
@@ -290,6 +300,7 @@ function ns.MainStatsOK(info)
   local main = MAIN[PlayerClass() or ""]
   if not main then return true end
   local s = ns.ItemStats(info)
+  if not s and StatsApi() then Unknown() end
   if not s or next(s) == nil then return true end
   for key in pairs(s) do
     if main[key] then return true end
@@ -334,6 +345,7 @@ function ns.TalentTree()
 end
 ns.On("CHARACTER_POINTS_CHANGED", function() ns.BumpVersion() end)
 ns.On("PLAYER_TALENT_UPDATE", function() ns.BumpVersion() end)
+ns.On("ACTIVE_TALENT_GROUP_CHANGED", function() ns.BumpVersion() end) -- (Leistungsrunde 6) a second talent set, where the client has one
 
 function ns.StatWeights()
   local class = PlayerClass() or ""
@@ -353,7 +365,100 @@ end
 -- Value of the item against what it would replace in that slot (a two-hand
 -- weapon: both hands; an empty slot counts as 0). Returns new, old (nil when
 -- either is unknown).
+---------------------------------------------------------------------------
+-- (1.4.0, Daniel 31.10.2026: one judgement of gear in DonData) With DonData's DonDataAPI 3 the value is DonData's: the
+-- stats with the same weights, plus the armor and the weapon DPS for your class (wands by DPS first, other classes'
+-- ranged weapons by their stats, the item level last), so Geardon's arrow and Questdon's reward glow agree. Without it
+-- Geardon judges as before (Geardon does not need DonData).
+---------------------------------------------------------------------------
+function ns.SharedGear()
+  local api = rawget(_G, "DonDataAPI")
+  if type(api) == "table" and (tonumber(api.version) or 0) >= 3 and type(api.GearCompare) == "function" then return api end
+  return nil
+end
+
+-- (Leistungsrunde 6) DonDataAPI 4 says when its gear answers may change (weights, worth of armor, an item it could
+-- not read yet): then the version goes up and kept judgements are dropped. Asked at runtime (DonData may load after
+-- Geardon); the API table it registered with is kept (a new one is registered again).
+local hookedApi
+local function OnDonData(what)
+  if what == "learned" then return end -- quest data: not part of a judgement
+  ns.donDataNotices = (ns.donDataNotices or 0) + 1
+  ns.BumpVersion()
+  if ns.Dirty then ns.Dirty() end
+end
+function ns.HookDonData()
+  local api = rawget(_G, "DonDataAPI")
+  if type(api) ~= "table" then return false end
+  if hookedApi == api then return true end
+  if (tonumber(api.version) or 0) < 4 or type(api.RegisterCallback) ~= "function" then return false end
+  local ok, yes = pcall(api.RegisterCallback, OnDonData)
+  if ok and yes then hookedApi = api return true end
+  return false
+end
+-- May ns.Judge keep its results? Without DonData's judgement Geardon's own events cover everything it reads. With
+-- DonDataAPI 3 alone not: DonData's value also rests on your health and armor, which Geardon does not follow.
+function ns.JudgeMemoOK()
+  local api = ns.SharedGear()
+  if not api then return true end
+  return hookedApi == api or ns.HookDonData()
+end
+-- what the item would replace, as DonData takes it: a link, both hands for a two-hand weapon, nil for an empty slot
+local hands = {}
+local function Replaced(info, slot)
+  local eq = ns.Equipped()
+  if info.equipLoc == "INVTYPE_2HWEAPON" then
+    local a, b = eq.MainHandSlot, eq.SecondaryHandSlot
+    hands[1], hands[2] = nil, nil
+    if a then hands[1] = a.link end
+    if b then hands[#hands + 1] = b.link end
+    return hands[1] and hands or nil
+  end
+  local e = eq[slot or ""]
+  return e and e.link or nil
+end
+local function SharedValues(api, info, slot)
+  local new = api.GearValue(info.link)
+  if not new then return nil end
+  local r = Replaced(info, slot)
+  if r == nil then return new, 0 end
+  if type(r) == "string" then
+    local old = api.GearValue(r)
+    if not old then return nil end
+    return new, old
+  end
+  local old = 0
+  for _, link in ipairs(r) do
+    local v = api.GearValue(link)
+    if not v then return nil end
+    old = old + v
+  end
+  return new, old
+end
+
+-- (Kritikrunde) of the two slots a ring, trinket or (dual wield) one-hand weapon may go to, the one whose item is worth
+-- least by DonData's value (an empty one first): slot name and its item level; nil when there is no choice or a value
+-- is unknown
+function ns.WeakerByValue(info, slot)
+  local api = ns.SharedGear()
+  if not api or (ns.db and ns.db.arrowStatValue == false) or not info then return nil end
+  local slots = ns.TargetSlots(info.equipLoc)
+  if not slots or #slots < 2 then return nil end
+  local eq = ns.Equipped()
+  local best, bestV
+  for _, name in ipairs(slots) do
+    local e = eq[name]
+    local v = 0
+    if e then v = api.GearValue(e.link) if not v then Unknown() return nil end end
+    if not bestV or v < bestV then best, bestV = name, v end
+  end
+  local e = eq[best]
+  return best, (e and e.level) or 0
+end
+
 function ns.StatValues(info, slot)
+  local api = ns.SharedGear()
+  if api and info and info.link then return SharedValues(api, info, slot) end
   local new = ns.StatValue(ns.ItemStats(info))
   if not new then return nil end
   local eq = ns.Equipped()
@@ -390,7 +495,16 @@ end
 -- -1: less, nil: the same, unknown, no stats on either, or the option is off.
 function ns.StatCompare(info, slot)
   if ns.db and ns.db.arrowStatValue == false then return nil end
+  -- (1.4.0) DonData's judgement: 1, -1, or nil when alike in value, DPS and item level or unknown
+  local api = ns.SharedGear()
+  if api and info and info.link then
+    local ok, sign = pcall(api.GearCompare, info.link, Replaced(info, slot))
+    if not ok or sign == nil then Unknown() return nil end -- (Leistungsrunde 6) nil: unknown, 0: alike
+    if sign == 0 then return nil end
+    return sign
+  end
   local new, old = ns.StatValues(info, slot)
+  if not new and StatsApi() then Unknown() end
   if not new or (new == 0 and old == 0) or math.abs(new - old) < 0.01 then return nil end
   return new > old and 1 or -1
 end
@@ -403,6 +517,7 @@ end
 -- are worn (a bonus may be active). Read once per gear change.
 ---------------------------------------------------------------------------
 local setState, setVer = {}, nil
+local setGuessed = {} -- (Leistungsrunde 6) slots whose bonus came from the count: the tooltip data was not there yet
 
 local function Prefix(global)
   local fmt = ns.Str(rawget(_G, global))
@@ -431,6 +546,7 @@ end
 
 local function ReadSets()
   wipe(setState)
+  wipe(setGuessed)
   local eq = ns.Equipped()
   local count = {}
   for _, e in pairs(eq) do
@@ -440,7 +556,10 @@ local function ReadSets()
     if e.setID then
       stats.setChecks = stats.setChecks + 1
       local active = ActiveBonus(ns.SLOT[name])
-      if active == nil then active = count[e.setID] >= 2 end
+      if active == nil then
+        active = count[e.setID] >= 2
+        setGuessed[name] = C_TooltipInfo and type(C_TooltipInfo.GetInventoryItem) == "function" or nil
+      end
       setState[name] = active and e.setID or false
     end
   end
@@ -452,6 +571,7 @@ end
 function ns.SetPieceAtStake(slot, info)
   if setVer ~= ns.version then ReadSets() end
   local id = slot and setState[slot]
+  if slot and setGuessed[slot] then Unknown() end
   if not id then return nil end
   if info and info.setID == id then return nil end
   return id
@@ -508,6 +628,7 @@ function ns.PairPartner(info)
   if not (MAIN_HAND[loc] or OFF_HAND[loc]) then return nil end
   if DUAL_ONLY[loc] and ns.Value(rawget(_G, "CanDualWield")) ~= true then return nil end
   ReadHands()
+  if ns.checkStats and (ns.checkStats.indexPending or 0) > 0 then Unknown() end
   local list = OFF_HAND[loc] and hands.main or hands.off
   for i = 1, 2 do
     local g = list[i]
@@ -565,7 +686,9 @@ function ns.UniqueWorn(info, slot)
   for _, name in ipairs(ns.TargetSlots(info.equipLoc) or {}) do
     local e = eq[name]
     if name ~= slot and e and e.link and tonumber(e.link:match("item:(%d+)")) == info.itemID then
-      return IsUnique(info) == true
+      local u = IsUnique(info)
+      if u == nil then Unknown() end
+      return u == true
     end
   end
   return false

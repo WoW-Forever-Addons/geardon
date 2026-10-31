@@ -25,13 +25,23 @@ local function LineType()
   return e and ns.Num(e.ItemLevel) or 31
 end
 
+-- (D16, 31.10.2026) The pattern from the game's ITEM_LEVEL text, built once
+-- (it was built anew for every item tooltip). false: the text is missing.
+local levelPattern
+local function LevelPattern()
+  if levelPattern == nil then
+    local text = ns.Str(rawget(_G, "ITEM_LEVEL"))
+    levelPattern = text and ("^" .. text:gsub("%%d", "(%%d+)"):gsub("%%s", "(.+)")) or false
+  end
+  return levelPattern or nil
+end
+
 -- Does the game's tooltip already show the item level?
 local function HasLevelLine(data, level)
   local lines = type(data) == "table" and data.lines
   if type(lines) ~= "table" then return false end
   local t = LineType()
-  local pattern = ns.Str(rawget(_G, "ITEM_LEVEL"))
-  pattern = pattern and ("^" .. pattern:gsub("%%d", "(%%d+)"):gsub("%%s", "(.+)"))
+  local pattern = LevelPattern()
   for _, line in ipairs(lines) do
     if type(line) == "table" then
       if line.type == t then return true end

@@ -1,5 +1,7 @@
 local addonName, ns = ...
 local L = ns.L
+ns.Style = LibStub("DonCore-1.0"):Get("Style", 3) -- shared kit from DonCore (Libs\DonCore\Style.lua)
+LibStub("DonCore-1.0"):Get("Settings", 1):Attach(addonName, ns) -- Blizzard options from DonCore (Libs\DonCore\Settings.lua)
 
 ---------------------------------------------------------------------------
 -- Geardon: item level for WoW Forever. Flat settings keys, registered by
@@ -97,12 +99,34 @@ end
 function ns.Errors() return errors end
 function ns.RecordError(context, err) pcall(Record, context, err) end
 
+-- (D16, 31.10.2026, from Vitaldon/Core.lua) Runs without creating a closure or
+-- table per call for up to four arguments (events and tickers come often). The
+-- runner reads the upvalues the moment xpcall starts it, so a nested SafeCall
+-- cannot change the arguments of the outer one.
+local runFn, runA, runB, runC, runD, runContext
+local function Runner() return runFn(runA, runB, runC, runD) end
+local function Handler(err)
+  pcall(Record, runContext, err)
+  return err
+end
+
 function ns.SafeCall(context, fn, ...)
-  local args, n = { ... }, select("#", ...)
-  local ok, a, b, c = xpcall(function() return fn(unpack(args, 1, n)) end, function(err)
-    pcall(Record, context, err)
-    return err
-  end)
+  local n = select("#", ...)
+  if n > 4 then
+    local args = { ... }
+    local prev = runContext
+    runContext = context
+    local ok, a, b, c = xpcall(function() return fn(unpack(args, 1, n)) end, Handler)
+    runContext = prev
+    if ok then return a, b, c end
+    return
+  end
+  local prev = runContext
+  runFn, runA, runB, runC, runD = fn, ...
+  runContext = context
+  local ok, a, b, c = xpcall(Runner, Handler)
+  runFn, runA, runB, runC, runD = nil, nil, nil, nil, nil
+  runContext = prev
   if ok then return a, b, c end
 end
 
@@ -125,15 +149,36 @@ end
 ---------------------------------------------------------------------------
 local frame = CreateFrame("Frame")
 local listeners, initCallbacks, addonCallbacks = {}, {}, {}
+-- (D16, 31.10.2026) Unit events: ns.On(event, fn, units) with units = { token = true, ... }
+-- calls fn only for those units (first event argument); other, secret or
+-- non-string units are dropped before any protected call. The filter is per
+-- listener: a listener without units still gets every unit.
+local unitFilters = {} -- event -> { [index of the listener] = units }
 
-function ns.On(event, fn)
+function ns.On(event, fn, units)
   if not listeners[event] then
     listeners[event] = {}
     local ok = pcall(frame.RegisterEvent, frame, event) -- unknown events throw
     if not ok then listeners[event] = nil return false end
   end
   table.insert(listeners[event], fn)
+  if type(units) == "table" then
+    unitFilters[event] = unitFilters[event] or {}
+    unitFilters[event][#listeners[event]] = units
+  end
   return true
+end
+
+local function Dispatch(event, ...)
+  local list = listeners[event]
+  if not list then return end
+  local filters = unitFilters[event]
+  local unit = filters and ...
+  local known = filters and type(unit) == "string" and ns.Usable(unit)
+  for i = 1, #list do
+    local units = filters and filters[i]
+    if not units or (known and units[unit]) then ns.SafeCall(event, list[i], event, ...) end
+  end
 end
 
 function ns.OnInit(fn) table.insert(initCallbacks, fn) end
@@ -198,17 +243,11 @@ frame:SetScript("OnEvent", function(_, event, ...)
     elseif ns.db and type(name) == "string" then
       RunAddon(name)
     end
-    local list = listeners[event]
-    if list and ns.db then
-      for i = 1, #list do ns.SafeCall(event, list[i], event, ...) end
-    end
+    if ns.db then Dispatch(event, ...) end
     return
   end
   if not ns.db then return end
-  local list = listeners[event]
-  if list then
-    for i = 1, #list do ns.SafeCall(event, list[i], event, ...) end
-  end
+  Dispatch(event, ...)
 end)
 
 ---------------------------------------------------------------------------
