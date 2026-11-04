@@ -113,46 +113,14 @@ end
 
 ---------------------------------------------------------------------------
 -- Window with a report to copy (Ctrl+A, Ctrl+C)
+-- (02.11.2026, StyleKit 2 step 4, docs/layout_2026-11-02/geardon/) DonCore's one copy window (Kit.ShowCopy, the same as
+-- Leveldon's export) instead of a panel with an edit box of our own.
 ---------------------------------------------------------------------------
-local panel, report
-
-local function Store()
-  if type(ns.db.diagWindow) ~= "table" then ns.db.diagWindow = {} end
-  return ns.db.diagWindow
-end
-
-local function Build()
-  local Style = ns.Style
-  panel = Style.Panel("GeardonDiagPanel", UIParent, {
-    title = Style.Wordmark("Gear", "don") .. "  " .. Style.Colorize(L["Diagnostics"], "textSecondary"),
-    width = 380, close = true, closeTooltip = L["Close"],
-    get = function(key) return Store()[key] end,
-    set = function(key, value) Store()[key] = value end,
-    defaultPoint = { "CENTER", "CENTER", 0, 80 },
-    strata = "DIALOG",
-  })
-  local scroll = CreateFrame("ScrollFrame", nil, panel, "UIPanelScrollFrameTemplate")
-  local box = CreateFrame("EditBox", nil, scroll)
-  box:SetMultiLine(true)
-  box:SetAutoFocus(false)
-  box:SetFontObject("GameFontHighlightSmall")
-  box:SetWidth(330)
-  box:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
-  box:SetScript("OnTextChanged", function(self, user) if user and self._text then self:SetText(self._text) end end)
-  scroll:SetScrollChild(box)
-  report = { scroll = scroll, box = box }
-end
-
 function ns.ShowDiag()
-  if not (ns.Style and ns.Style.Panel and ns.Style.Content) then return ns.PrintDiag() end
-  if not panel then Build() end
-  panel:ClearRows()
-  ns.Style.Header(panel, L["Report to copy"])
-  report.box._text = table.concat(ns.DiagLines(), "\n")
-  report.box:SetText(report.box._text)
-  ns.Style.Content(panel, report.scroll, 220)
-  ns.Style.Row(panel):SetText(L["/gd diag chat prints everything to the chat. In the report: Ctrl+A, Ctrl+C copies it."], "textHint")
-  panel:FadeIn()
+  local Kit = LibStub("DonCore-1.0"):Get("Kit", 4)
+  if not (Kit and Kit.ShowCopy) then return ns.PrintDiag() end
+  return Kit.ShowCopy("Geardon · " .. L["Diagnostics"], L["Ctrl+A, Ctrl+C copies the report."],
+    table.concat(ns.DiagLines(), "\n"), { selectAll = L["Select all"], close = L["Close"] })
 end
 
 ns.OnInit(function()
@@ -160,6 +128,15 @@ ns.OnInit(function()
   if ns.Style then
     local before = ns.Style.onError
     ns.Style.onError = function(where, err)
+      ns.RecordError("kit:" .. tostring(where), err)
+      if before then pcall(before, where, err) end
+    end
+  end
+  -- (02.11.2026) the Kit's windows (gear check, copy window) report their errors the same way
+  local Kit = LibStub("DonCore-1.0"):Get("Kit", 4)
+  if Kit then
+    local before = Kit.onError
+    Kit.onError = function(where, err)
       ns.RecordError("kit:" .. tostring(where), err)
       if before then pcall(before, where, err) end
     end

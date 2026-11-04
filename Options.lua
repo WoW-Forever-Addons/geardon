@@ -11,7 +11,60 @@ local function Refresh()
   if ns.UpdateGroupWindow then ns.UpdateGroupWindow() end
   if ns.RefreshBagAddons then ns.RefreshBagAddons() end
   if ns.UpdateCheck then ns.UpdateCheck() end
+  -- (02.11.2026) the preview card of the options window follows at once
+  local O = LibStub("DonCore-1.0"):Get("Options", 3)
+  if O and O.Preview then pcall(O.Preview) end
 end
+
+---------------------------------------------------------------------------
+-- (02.11.2026, StyleKit 2 step 4, docs/layout_2026-11-02/geardon/, Daniel: "Optionsvorschau je Reiter") the preview card
+-- of DonCore's options window (Options minor 3, page.preview): item buttons in two rows (bags, character frame) with the
+-- number and the arrow drawn by Geardon's own overlay code (ns.ShowLevel), so they look exactly as the options are set.
+---------------------------------------------------------------------------
+local SAMPLES = {
+  { icon = "Interface\\Icons\\INV_Helmet_08", level = 30, quality = 2, upgrade = true },
+  { icon = "Interface\\Icons\\INV_Shoulder_02", level = 27, quality = 3, upgrade = true, check = true },
+  { icon = "Interface\\Icons\\INV_Chest_Chain_05", level = 36, quality = 1, soon = true },
+  { icon = "Interface\\Icons\\INV_Belt_03", level = 12, quality = 0 },
+}
+local PLACES = { "bags", "character" }
+
+local function DrawPreview(f, w)
+  local Kit = LibStub("DonCore-1.0"):Get("Kit", 4)
+  if not Kit then return end
+  local db = ns.db or {}
+  local gap = 8
+  local size = math.max(24, math.min(38, math.floor((w - (#SAMPLES - 1) * gap) / #SAMPLES)))
+  f.buttons = f.buttons or {}
+  for r, place in ipairs(PLACES) do
+    for i, s in ipairs(SAMPLES) do
+      local k = (r - 1) * #SAMPLES + i
+      local b = f.buttons[k]
+      if not b then
+        b = CreateFrame("Frame", nil, f)
+        b.icon = b:CreateTexture(nil, "ARTWORK")
+        b.icon:SetPoint("TOPLEFT", 1, -1) b.icon:SetPoint("BOTTOMRIGHT", -1, 1)
+        b.icon:SetTexture(s.icon)
+        if b.icon.SetTexCoord then b.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93) end
+        b.edge = Kit.Border(b, Kit.QualityColor(s.quality))
+        f.buttons[k] = b
+      end
+      b:SetSize(size, size)
+      b:ClearAllPoints()
+      b:SetPoint("TOPLEFT", f, "TOPLEFT", (i - 1) * (size + gap), -(r - 1) * (size + gap + 4))
+      local shown = ns.QualityShown(s.quality) and (s.quality ~= 0 or db.showGrey)
+      local soon = s.soon and db.arrowSoon ~= false
+      if shown then
+        ns.ShowLevel(b, s.level, s.quality, { place = place, upgrade = s.upgrade and not (s.check and db.arrowUncertain == false),
+          check = s.check, soon = soon })
+      else
+        ns.HideLevel(b)
+      end
+    end
+  end
+end
+
+local function Preview(f, w) pcall(DrawPreview, f, w) end
 
 local function Points(v) return ("%d"):format(v) end
 
@@ -23,7 +76,7 @@ local function ColorOptions()
 end
 
 local PAGES = {
-  { title = "Item level", tip = "Where the item level appears on item icons.", items = {
+  { title = "Item level", tip = "Where the item level appears on item icons.", preview = Preview, items = {
     { header = "Windows" },
     { key = "showCharacter", name = "Character frame", tip = "Item level on every equipped slot.", onChange = Refresh },
     { key = "showAverage", name = "Average on the character frame", tip = "Your average item level in the free bottom left corner of the character frame, below the wrist slot. Blizzard's Forever character frame does not show it. Empty slots count as 0, like the game counts them; Geardon shows how many are empty.", onChange = Refresh },
@@ -44,7 +97,7 @@ local PAGES = {
     { key = "chatChange", name = "Chat line when your item level changes", tip = "One line in the chat when your average changes, with the slots that changed, e.g. Item level 24.3 -> 25.1 (Head +6). Not on login; quick swaps make one line.", onChange = Refresh },
     { key = "chatUpgrade", name = "Chat line for an upgrade in your bags", tip = "One line in the chat when an upgrade comes into your bags (loot, quest, mail, trade), with the slot and the gain, e.g. Upgrade in your bags: [Helm] (Head +6). Once per item, not on login, never for gear you swap.", onChange = Refresh },
   } },
-  { title = "Look", tip = "Position, size and colour of the numbers.", items = {
+  { title = "Look", tip = "Position, size and colour of the numbers.", preview = Preview, items = {
     { header = "All places" },
     { key = "numberColor", kind = "dropdown", name = "Number colour", tip = "Item quality: the colour of the item (green, blue, purple). White: always white. Gap to your average: green above your average, white up to the behind levels below it, orange further below.", options = ColorOptions, onChange = Refresh },
     { key = "showGrey", name = "Also on grey items", tip = "Poor (grey) items are vendor junk; off: no number on them.", onChange = Refresh },
@@ -59,7 +112,7 @@ local PAGES = {
     { key = "numberPositionOther", kind = "dropdown", name = "Position (loot, rewards, merchants)", tip = "Where the number sits on loot, quest rewards and merchant items.", options = PositionOptions, onChange = Refresh },
     { key = "numberSizeOther", kind = "slider", name = "Size (loot, rewards, merchants)", tip = "Size of the number on loot, quest rewards and merchant items. Default 12.", min = 8, max = 18, step = 1, format = Points, onChange = Refresh },
   } },
-  { title = "Upgrade arrow", tip = "When an item gets the upgrade arrow.", items = {
+  { title = "Upgrade arrow", tip = "When an item gets the upgrade arrow.", preview = Preview, items = {
     { header = "Arrow" },
     { key = "upgradeArrow", name = "Green arrow on upgrades", tip = "Bags, bank, loot and quest rewards: a green arrow when the item has a higher item level than what you wear in that slot and you can wear it now (class, armor type, level). Rings, trinkets and one-hand weapons compare with the weaker of your two.", onChange = Refresh },
     { key = "arrowUncertain", name = "Yellow arrow when unsure", tip = "In Forever the stats come from item level and quality. A higher item level of a lower quality than yours may be weaker: yellow arrow, the tooltip says why. The same when the item would replace a piece of a set whose bonus you have. Off: no arrow then.", parent = "upgradeArrow", onChange = Refresh },
@@ -86,7 +139,8 @@ local PAGES = {
     { key = "groupScan", name = "Inspect group members", tip = "Inspects one group member at a time, only out of combat, not while Blizzard's inspect window is open and only players close enough to be seen. A player is inspected again after 10 minutes or when their gear changes.", onChange = Refresh },
     { key = "groupShare", name = "Share with Geardon users", tip = "Sends your average item level to your group and reads what other Geardon users send (one short addon message, only to your group). They then need no inspect.", onChange = Refresh },
     { header = "Window" },
-    { kind = "button", name = "Group window", button = "Show / hide", onClick = function() ns.ToggleGroupWindow() end, tip = "Small window with every member's item level, highest first, and the group average. It opens only here or with /gd group." },
+    { kind = "button", name = "Group window", button = "Show / hide", onClick = function() ns.ToggleGroupWindow() end,
+      state = function() local p = _G.GeardonGroupPanel return p ~= nil and p:IsShown() and true or false end, tip = "Small window with every member's item level, highest first, and the group average. It opens only here or with /gd group." },
     { kind = "button", name = "Window position", button = "Reset", onClick = function() ns.ResetGroupWindow() end, tip = "Puts the group window back to its default place." },
   } },
 }
@@ -108,18 +162,30 @@ local function Status()
 end
 
 local TOOLS = {
-  { "Group window", "Show / hide", function() ns.ToggleGroupWindow() end, "Shows or hides the group window. /gd group" },
+  -- (02.11.2026) on / off tools show their state in DonCore's options window (state)
+  { "Group window", "Show / hide", function() ns.ToggleGroupWindow() end, "Shows or hides the group window. /gd group",
+    state = function() local p = _G.GeardonGroupPanel return p ~= nil and p:IsShown() and true or false end },
   { "Inspect group again", "Inspect", function() ns.RescanGroup(true) end, "Forgets inspected values and inspects your group again, out of combat. /gd scan" },
-  { "Gear check", "Show / hide", function() ns.ShowCheck() end, "Upgrades in your bags, slots behind your level, dungeons for your level and bag items worse than yours with their vendor price. Only a list: nothing is sold, equipped or deleted. /gd check" },
+  { "Gear check", "Show / hide", function() ns.ShowCheck() end, state = function() local p = _G.GeardonCheckPanel return p ~= nil and p:IsShown() and true or false end, "Upgrades in your bags, slots behind your level, dungeons for your level and bag items worse than yours with their vendor price. Only a list: nothing is sold, equipped or deleted. /gd check" },
   { "Diagnostics", "Show", function() ns.ShowDiag() end, "Window with a report to copy for bug reports. /gd diag, in the chat: /gd diag chat" },
 }
 for _, t in ipairs(TOOLS) do t[3] = ns.Guard("tool", t[3]) end
 
-local function Build()
-  category = ns.BuildSettings({ name = "Geardon", status = Status, tools = TOOLS, pages = PAGES })
+-- (01.11.2026, StyleKit 2 step 3) the commands, shown under the status on the Tools tab of the shared options window
+local function Help()
+  local lines = {}
+  for _, c in ipairs(ns.COMMANDS or {}) do lines[#lines + 1] = c[1] .. "  " .. L[c[2]] end
+  return table.concat(lines, "\n")
 end
 
+local function Build()
+  category = ns.BuildSettings({ name = "Geardon", status = Status, tools = TOOLS, pages = PAGES, help = Help })
+end
+
+-- (01.11.2026) DonCore's options window of all Don addons (no Blizzard panel, so also in combat); Blizzard's settings
+-- only when that window is not there (an older DonCore), and those stay closed in combat.
 function ns.OpenOptions()
+  if ns.OpenDonOptions and ns.OpenDonOptions() then return end
   if ns.InCombat() then
     ns.Print(L["Options cannot be opened in combat."])
     return

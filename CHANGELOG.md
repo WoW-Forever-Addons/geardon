@@ -1,5 +1,13 @@
 # Changes
 
+## 1.5.0
+
+- **The Don look:** the group window (`/gd group`) like Questdon's list: class symbol, name in class colour, source and age, the average on the right, the group average below; from 6 members one line each by raid group. The gear check (`/gd check`) is a window you can resize with your item level and weakest slot on top, four sections to fold, item rows with quality border, vendor prices and no limit of 25 rows. Diagnostics in the shared copy window.
+- **One options window for all Don addons:** switches, sliders, lists, a picture and an explanation for every option, a search over all Don addons. The gear button and the slash command open it on this addon's section. Blizzard's AddOns page only shows the status and a button. The options show a preview of the number and the arrow.
+- **Window size:** all Don windows share one scale, 80 % by default, set from 60 to 110 % under General > Window in the options window. Saved window sizes are reset once, places stay.
+- **Addon list:** the addon has its own logo in the game's addon list.
+- **Update note:** new files, so restart the game after updating (a /reload is not enough).
+
 ## 1.4.0
 
 - **No new required addon.** With **DonData** installed (it comes with Questdon and Leveldon) Geardon uses its gear score; without it Geardon works as before.

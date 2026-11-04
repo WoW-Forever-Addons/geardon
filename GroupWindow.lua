@@ -7,8 +7,16 @@ local L = ns.L
 -- (/gd group, the tool in the options), no longer by itself in a group or
 -- raid; it stays open until closed. The group values are still collected
 -- (Group.lua): the player tooltips use them.
+-- (02.11.2026, StyleKit 2 step 4, docs/layout_2026-11-02/geardon/, Daniel: "Freigeben wie gezeigt") the Don look like
+-- Questdon's list: per member a Don row with a colour mark (gold you, green known, blue being inspected, grey unknown),
+-- the class symbol, the name in its class colour (DonCore's Kit.ClassColor), a second line with source and age and the
+-- average on the right; the group average in the foot. From 6 members (a raid) one-line rows of 22 px, the raid groups
+-- as a line with their average (Daniel: "einzeilig ab 6"). Every text one line, cut with the whole text in the tooltip.
 ---------------------------------------------------------------------------
-local WIDTH = 230
+local WIDTH = 260
+local COMPACT_FROM = 6
+local LOGO = "Interface\\Icons\\INV_Chest_Plate06"
+local CLASS_ICONS = "Interface\\Glues\\CharacterCreate\\UI-CharacterCreate-Classes"
 local panel
 local forced = false
 local queued = false
@@ -19,22 +27,46 @@ local function Store()
   return db.groupWin
 end
 
+local function Kit() return LibStub("DonCore-1.0"):Get("Kit", 4) end
+
+-- colour marks (Kit.C, the same values in Style's Don look)
+local function Mark(key)
+  local K = Kit()
+  local c = K and K.C[key]
+  return c and { c[1], c[2], c[3] } or nil
+end
+
 local function ClassColor(class)
-  if not class then return nil end
-  if C_ClassColor and C_ClassColor.GetClassColor then
-    local c = ns.Call(C_ClassColor.GetClassColor, class)
-    if type(c) == "table" and c.r then return { c.r, c.g, c.b } end
-  end
-  local t = rawget(_G, "RAID_CLASS_COLORS")
-  local c = type(t) == "table" and t[class]
-  if type(c) == "table" and c.r then return { c.r, c.g, c.b } end
-  return nil
+  local K = Kit()
+  local c = class and K and K.ClassColor and K.ClassColor(class)
+  return type(c) == "table" and c[1] and { c[1], c[2], c[3] } or nil
+end
+
+local function ClassIcon(row, class)
+  local K = Kit()
+  local tc = class and K and K.ClassCoords and K.ClassCoords(class)
+  if type(tc) == "table" and tc[1] then row:SetIcon(CLASS_ICONS, false, tc) else row:SetIcon(nil) end
 end
 
 local function Ago(t)
   local s = math.max(0, (ns.Num(ns.Value(GetTime)) or 0) - (t or 0))
   if s < 60 then return L["just now"] end
   return L["%d min ago"]:format(math.floor(s / 60))
+end
+
+-- the second line of a member: where the value comes from and how old it is
+local function SubLine(m)
+  if m.src == "self" then
+    local _, _, w = ns.Average(ns.Equipped())
+    local e = w and ns.Equipped()[w]
+    -- your own row is marked gold already: its second line names the weakest slot
+    if w and e and e.level then return L["Weakest slot: %s (%s)"]:format(ns.SlotLabel(w), ns.FormatLevel(e.level)) end
+    return L["your character"]
+  elseif m.src == "addon" then return "Geardon · " .. Ago(m.t)
+  elseif m.src == "inspect" then return L["inspected"] .. " · " .. Ago(m.t)
+  elseif m.waiting then return L["inspecting"], "blue"
+  end
+  return L["not known yet"]
 end
 
 local function RowTooltip(m)
@@ -67,9 +99,11 @@ local function RowTooltip(m)
 end
 
 local function Build()
-  local Style = ns.Style
+  local Style, K = ns.Style, Kit()
+  local word = K and K.Upper and K.Upper(L["Group"]) or L["Group"]
   panel = Style.Panel("GeardonGroupPanel", UIParent, {
-    title = Style.Wordmark("Gear", "don") .. "  " .. Style.Colorize(L["Group"], "textSecondary"),
+    look = "don", logo = LOGO,
+    title = "GEARDON  " .. (K and K.C.txGold.hex and ("|c" .. K.C.txGold.hex .. word .. "|r") or Style.Colorize(word, "accent")),
     width = WIDTH,
     close = true,
     collapse = true,
@@ -79,44 +113,96 @@ local function Build()
     closeTooltip = { L["Hide window"], nil, L["/gd group shows it again."] },
     collapseTooltip = { L["Collapse / expand"], nil, nil },
     onClose = function() forced = false if panel then panel:FadeOut() end end,
-    buttons = { { kind = "options", key = "options", tooltip = { L["Options"], nil, L["Opens the Geardon options."] },
-      onClick = function() ns.OpenOptions() end } },
+    -- (01.11.2026) the cog of every Don addon: Style.Panel takes symbol, click and tooltip from DonCore's Options
+    buttons = { { key = "options", donOptions = "Geardon", hint = "/gd", onClick = function() ns.OpenOptions() end } },
   })
   return panel
+end
+
+-- the raid group (1 to 8) of a raid unit, nil outside a raid
+local function Subgroup(unit)
+  local i = type(unit) == "string" and tonumber(unit:match("^raid(%d+)$"))
+  if not i then return nil end
+  local _, _, sub = ns.Results(rawget(_G, "GetRaidRosterInfo"), i)
+  return ns.Num(sub)
+end
+
+local function Sorted(list)
+  table.sort(list, function(a, b)
+    if (a.level ~= nil) ~= (b.level ~= nil) then return a.level ~= nil end
+    if a.level and b.level and a.level ~= b.level then return a.level > b.level end
+    return tostring(a.name) < tostring(b.name)
+  end)
+  return list
+end
+
+local function Average(list)
+  local sum, n = 0, 0
+  for _, m in ipairs(list) do if m.level then sum, n = sum + m.level, n + 1 end end
+  return n > 0 and sum / n or nil, n
+end
+
+local function AddMember(m, compact)
+  local Style = ns.Style
+  local row = Style.Row(panel)
+  local value, color
+  if m.level then
+    value, color = ns.FormatAverage(m.level), Mark("txGold") or "accent"
+  elseif m.waiting then
+    value, color = "…", Mark("blue") or "textHint"
+  else
+    value, color = "?", Mark("quiet") or "textHint"
+  end
+  row:SetText(m.name, "textPrimary")
+  local cc = ClassColor(m.class)
+  if cc then row:SetTextColor(cc) end
+  row:SetValue(value, color)
+  ClassIcon(row, m.class)
+  local mark = m.src == "self" and "goldBright" or m.level and "green" or m.waiting and "blue" or "grey"
+  row:SetMark(Mark(mark))
+  if compact then
+    row:SetSub(nil)
+  else
+    local sub, subColor = SubLine(m)
+    row:SetSub(sub, subColor and Mark(subColor))
+  end
+  row:SetActive(m.src == "self")
+  row:SetTooltip(RowTooltip(m))
 end
 
 local function Fill()
   local Style = ns.Style
   panel:ClearRows()
   local list = ns.GroupLevels()
-  table.sort(list, function(a, b)
-    if (a.level ~= nil) ~= (b.level ~= nil) then return a.level ~= nil end
-    if a.level and b.level and a.level ~= b.level then return a.level > b.level end
-    return tostring(a.name) < tostring(b.name)
-  end)
-  local sum, n = 0, 0
-  for _, m in ipairs(list) do
-    local row = Style.Row(panel)
-    local value, color
-    if m.level then
-      value, color = ns.FormatAverage(m.level), "textPrimary"
-      sum, n = sum + m.level, n + 1
-    elseif m.waiting then
-      value, color = L["inspecting"], "textHint"
-    else
-      value, color = "?", "textHint"
+  local compact = #list >= COMPACT_FROM
+  -- a raid: its groups in order, each with its average; without the raid's roster one list
+  local groups, order = {}, {}
+  if compact then
+    for _, m in ipairs(list) do
+      local g = Subgroup(m.unit)
+      if g then
+        if not groups[g] then groups[g] = {} order[#order + 1] = g end
+        table.insert(groups[g], m)
+      end
     end
-    row:SetText(m.name, "textPrimary")
-    local cc = ClassColor(m.class)
-    if cc then row:SetTextColor(cc) end
-    row:SetValue(value, color)
-    row:SetActive(m.src == "self")
-    row:SetTooltip(RowTooltip(m))
+    table.sort(order)
   end
-  if n > 0 then
-    local avg = Style.KeyValue(panel, L["Group average"], ns.FormatAverage(sum / n) ..
-      (n < #list and (" |cff9ea3ad(" .. L["%d of %d"]:format(n, #list) .. ")|r") or ""), "accent")
-    if avg then avg:SetGapBefore(Style.SPACING.section) end
+  if #order > 1 then
+    local fmt = type(rawget(_G, "GROUP_NUMBER")) == "string" and _G.GROUP_NUMBER or "Group %d"
+    for _, g in ipairs(order) do
+      local avg = Average(groups[g])
+      local hdr = Style.KeyValue(panel, fmt:format(g), avg and ns.FormatAverage(avg) or "")
+      if hdr then hdr:SetMark(Mark("goldMuted")) end
+      for _, m in ipairs(Sorted(groups[g])) do AddMember(m, true) end
+    end
+  else
+    for _, m in ipairs(Sorted(list)) do AddMember(m, compact) end
+  end
+  local avg, n = Average(list)
+  if avg then
+    local row = Style.KeyValue(panel, L["Group average"] .. (n < #list and (" · " .. L["%d of %d"]:format(n, #list)) or ""),
+      ns.FormatAverage(avg), Mark("txGold") or "accent")
+    if row then row:SetGapBefore(Style.SPACING.section) end
   end
 end
 

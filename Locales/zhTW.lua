@@ -70,7 +70,6 @@ L["Not known yet. Players are inspected out of combat when they are close enough
 L["Hide window"] = "隱藏視窗"
 L["Collapse / expand"] = "收起/展開"
 L["Options"] = "選項"
-L["Opens the Geardon options."] = "開啟 Geardon 選項。"
 L["You are not in a group; the window shows only you."] = "你不在隊伍中，視窗只會顯示你自己。"
 L["Inspecting your group again (out of combat, one player at a time)."] = "正在重新觀察你的隊伍(非戰鬥狀態下，一次一名玩家)。"
 
@@ -78,8 +77,6 @@ L["Inspecting your group again (out of combat, one player at a time)."] = "正�
 L["Diagnostics"] = "診斷"
 L["Diagnostics:"] = "診斷："
 L["Close"] = "關閉"
-L["Report to copy"] = "可複製的報告"
-L["/gd diag chat prints everything to the chat. In the report: Ctrl+A, Ctrl+C copies it."] = "/gd diag chat 會將所有內容輸出到聊天視窗。在報告中按 Ctrl+A、Ctrl+C 即可複製。"
 
 -- 選項：頁面與標題
 L["Where the item level appears on item icons."] = "設定物品等級要顯示在哪些物品圖示上。"
@@ -213,7 +210,6 @@ L["Level ranges: %s"] = "等級範圍來源：%s"
 L["%d-%d"] = "%d-%d"
 L["Bag cleanup"] = "背包整理"
 L["Nothing to clean up: no gear in your bags is worse than yours or unusable."] = "沒有需要整理的：背包中沒有比你身上差或無法使用的裝備。"
-L["%d more"] = "還有%d件"
 L["not usable"] = "無法使用"
 L["Your character cannot use it."] = "你的角色無法使用。"
 L["Lower item level than what you wear, not of a higher quality."] = "物品等級低於你穿戴的裝備，品質也不比它高。"
@@ -284,3 +280,10 @@ L["Soon: levels above yours"] = "即將：高於你的等級數"
 L["How many levels above yours still count as soon. Default 3."] = "高於你多少等級仍算即將。預設 3。"
 L["One-hand and off-hand against two-hand"] = "單手與副手對比雙手"
 L["While you wear a two-hand weapon, a one-hand weapon together with the best shield or off-hand item from your bags (or the other way round) gets a yellow arrow when both hands together are higher. The tooltip names the partner."] = "當你裝備雙手武器時，單手武器與背包中最好的盾牌或副手物品（或反過來）兩手合計較高時會顯示黃色箭頭。提示會說明搭配的物品。"
+
+-- (02.11.2026, StyleKit 2 step 4) gear check and group window in the Don style, the shared copy window
+L["you wear %s"] = "目前穿戴 %s"
+L["not sure"] = "不確定"
+L["not known yet"] = "尚未得知"
+L["Ctrl+A, Ctrl+C copies the report."] = "Ctrl+A、Ctrl+C 複製報告。"
+L["Select all"] = "全選"

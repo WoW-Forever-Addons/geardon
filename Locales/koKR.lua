@@ -70,7 +70,6 @@ L["Not known yet. Players are inspected out of combat when they are close enough
 L["Hide window"] = "창 숨기기"
 L["Collapse / expand"] = "접기 / 펼치기"
 L["Options"] = "설정"
-L["Opens the Geardon options."] = "Geardon 설정을 엽니다."
 L["You are not in a group; the window shows only you."] = "파티 중이 아니므로 창에는 자신만 표시됩니다."
 L["Inspecting your group again (out of combat, one player at a time)."] = "파티원을 다시 살펴봅니다(전투 중이 아닐 때 한 명씩)."
 
@@ -78,8 +77,6 @@ L["Inspecting your group again (out of combat, one player at a time)."] = "파�
 L["Diagnostics"] = "진단"
 L["Diagnostics:"] = "진단:"
 L["Close"] = "닫기"
-L["Report to copy"] = "복사용 보고서"
-L["/gd diag chat prints everything to the chat. In the report: Ctrl+A, Ctrl+C copies it."] = "/gd diag chat 명령어는 모든 내용을 대화창에 출력합니다. 보고서는 Ctrl+A, Ctrl+C로 복사할 수 있습니다."
 
 -- Options: pages and headers
 L["Where the item level appears on item icons."] = "아이템 레벨을 어느 아이템 아이콘에 표시할지 설정합니다."
@@ -213,7 +210,6 @@ L["Level ranges: %s"] = "레벨 범위 출처: %s"
 L["%d-%d"] = "%d-%d"
 L["Bag cleanup"] = "가방 정리"
 L["Nothing to clean up: no gear in your bags is worse than yours or unusable."] = "정리할 것이 없습니다. 가방에 착용 장비보다 나쁘거나 쓸 수 없는 장비가 없습니다."
-L["%d more"] = "%d개 더"
 L["not usable"] = "사용 불가"
 L["Your character cannot use it."] = "캐릭터가 사용할 수 없습니다."
 L["Lower item level than what you wear, not of a higher quality."] = "착용 중인 아이템보다 아이템 레벨이 낮고 등급도 높지 않습니다."
@@ -284,3 +280,10 @@ L["Soon: levels above yours"] = "곧: 내 레벨보다 높은 레벨 수"
 L["How many levels above yours still count as soon. Default 3."] = "내 레벨보다 몇 레벨 위까지 곧으로 볼지 정합니다. 기본값 3."
 L["One-hand and off-hand against two-hand"] = "한손과 보조장비 대 양손"
 L["While you wear a two-hand weapon, a one-hand weapon together with the best shield or off-hand item from your bags (or the other way round) gets a yellow arrow when both hands together are higher. The tooltip names the partner."] = "양손 무기를 착용 중일 때, 한손 무기와 가방 속 가장 좋은 방패나 보조장비(또는 그 반대)를 합친 것이 더 높으면 노란 화살표를 표시합니다. 툴팁에 짝이 나옵니다."
+
+-- (02.11.2026, StyleKit 2 step 4) gear check and group window in the Don style, the shared copy window
+L["you wear %s"] = "착용: %s"
+L["not sure"] = "불확실"
+L["not known yet"] = "아직 모름"
+L["Ctrl+A, Ctrl+C copies the report."] = "Ctrl+A, Ctrl+C로 보고서를 복사합니다."
+L["Select all"] = "모두 선택"

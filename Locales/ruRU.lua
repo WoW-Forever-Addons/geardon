@@ -70,7 +70,6 @@ L["Not known yet. Players are inspected out of combat when they are close enough
 L["Hide window"] = "Скрыть окно"
 L["Collapse / expand"] = "Свернуть / развернуть"
 L["Options"] = "Параметры"
-L["Opens the Geardon options."] = "Открывает параметры Geardon."
 L["You are not in a group; the window shows only you."] = "Вы не в группе, поэтому в окне только вы."
 L["Inspecting your group again (out of combat, one player at a time)."] = "Повторный осмотр группы (вне боя, по одному игроку)."
 
@@ -78,8 +77,6 @@ L["Inspecting your group again (out of combat, one player at a time)."] = "По�
 L["Diagnostics"] = "Диагностика"
 L["Diagnostics:"] = "Диагностика:"
 L["Close"] = "Закрыть"
-L["Report to copy"] = "Отчет для копирования"
-L["/gd diag chat prints everything to the chat. In the report: Ctrl+A, Ctrl+C copies it."] = "/gd diag chat выводит все данные в чат. Чтобы скопировать отчет: Ctrl+A, Ctrl+C."
 
 -- Options: pages and headers
 L["Where the item level appears on item icons."] = "Где показывать уровень предмета на значках."
@@ -213,7 +210,6 @@ L["Level ranges: %s"] = "Диапазоны уровней: %s"
 L["%d-%d"] = "%d-%d"
 L["Bag cleanup"] = "Разбор сумок"
 L["Nothing to clean up: no gear in your bags is worse than yours or unusable."] = "Разбирать нечего: в сумках нет экипировки хуже надетой или непригодной."
-L["%d more"] = "Еще %d"
 L["not usable"] = "непригодно"
 L["Your character cannot use it."] = "Ваш персонаж не может это использовать."
 L["Lower item level than what you wear, not of a higher quality."] = "Уровень ниже, чем у надетого, а качество не выше."
@@ -284,3 +280,10 @@ L["Soon: levels above yours"] = "Скоро: уровней выше вашег�
 L["How many levels above yours still count as soon. Default 3."] = "Сколько уровней выше вашего ещё считаются «скоро». По умолчанию 3."
 L["One-hand and off-hand against two-hand"] = "Одноручное и левая рука против двуручного"
 L["While you wear a two-hand weapon, a one-hand weapon together with the best shield or off-hand item from your bags (or the other way round) gets a yellow arrow when both hands together are higher. The tooltip names the partner."] = "Если на вас двуручное оружие, одноручное оружие вместе с лучшим щитом или предметом для левой руки из сумок (или наоборот) получает жёлтую стрелку, когда обе руки вместе выше. Подсказка называет пару."
+
+-- (02.11.2026, StyleKit 2 step 4) gear check and group window in the Don style, the shared copy window
+L["you wear %s"] = "надето: %s"
+L["not sure"] = "неясно"
+L["not known yet"] = "пока неизвестно"
+L["Ctrl+A, Ctrl+C copies the report."] = "Ctrl+A, Ctrl+C копирует отчет."
+L["Select all"] = "Выделить всё"

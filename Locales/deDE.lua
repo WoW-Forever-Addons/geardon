@@ -70,7 +70,6 @@ L["Not known yet. Players are inspected out of combat when they are close enough
 L["Hide window"] = "Fenster ausblenden"
 L["Collapse / expand"] = "Einklappen / ausklappen"
 L["Options"] = "Optionen"
-L["Opens the Geardon options."] = "Öffnet die Optionen von Geardon."
 L["You are not in a group; the window shows only you."] = "Du bist in keiner Gruppe, das Fenster zeigt nur dich."
 L["Inspecting your group again (out of combat, one player at a time)."] = "Deine Gruppe wird neu betrachtet (außerhalb des Kampfes, ein Spieler nach dem anderen)."
 
@@ -78,8 +77,6 @@ L["Inspecting your group again (out of combat, one player at a time)."] = "Deine
 L["Diagnostics"] = "Diagnose"
 L["Diagnostics:"] = "Diagnose:"
 L["Close"] = "Schließen"
-L["Report to copy"] = "Bericht zum Kopieren"
-L["/gd diag chat prints everything to the chat. In the report: Ctrl+A, Ctrl+C copies it."] = "/gd diag chat schreibt alles in den Chat. Im Bericht: Strg+A, Strg+C kopiert ihn."
 
 -- Options: pages and headers
 L["Where the item level appears on item icons."] = "Wo die Gegenstandsstufe auf Gegenstandssymbolen steht."
@@ -213,7 +210,6 @@ L["Level ranges: %s"] = "Stufenbereiche: %s"
 L["%d-%d"] = "%d-%d"
 L["Bag cleanup"] = "Taschen aufräumen"
 L["Nothing to clean up: no gear in your bags is worse than yours or unusable."] = "Nichts aufzuräumen: Keine Ausrüstung in deinen Taschen ist schwächer als deine oder unbrauchbar."
-L["%d more"] = "%d weitere"
 L["not usable"] = "unbrauchbar"
 L["Your character cannot use it."] = "Dein Charakter kann es nicht benutzen."
 L["Lower item level than what you wear, not of a higher quality."] = "Niedrigere Gegenstandsstufe als dein angelegtes Teil, keine höhere Qualität."
@@ -284,3 +280,10 @@ L["Soon: levels above yours"] = "Bald: Stufen über deiner"
 L["How many levels above yours still count as soon. Default 3."] = "Wie viele Stufen über deiner noch als bald zählen. Standard 3."
 L["One-hand and off-hand against two-hand"] = "Einhand und Schildhand gegen Zweihand"
 L["While you wear a two-hand weapon, a one-hand weapon together with the best shield or off-hand item from your bags (or the other way round) gets a yellow arrow when both hands together are higher. The tooltip names the partner."] = "Trägst du eine Zweihandwaffe, bekommt eine Einhandwaffe zusammen mit dem besten Schild oder Schildhandteil aus deinen Taschen (oder umgekehrt) einen gelben Pfeil, wenn beide Hände zusammen höher liegen. Der Tooltip nennt den Partner."
+
+-- (02.11.2026, StyleKit 2 step 4) gear check and group window in the Don style, the shared copy window
+L["you wear %s"] = "du trägst %s"
+L["not sure"] = "unsicher"
+L["not known yet"] = "noch unbekannt"
+L["Ctrl+A, Ctrl+C copies the report."] = "Strg+A, Strg+C kopiert den Bericht."
+L["Select all"] = "Alles markieren"

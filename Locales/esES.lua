@@ -70,7 +70,6 @@ L["Not known yet. Players are inspected out of combat when they are close enough
 L["Hide window"] = "Ocultar ventana"
 L["Collapse / expand"] = "Contraer/expandir"
 L["Options"] = "Opciones"
-L["Opens the Geardon options."] = "Abre las opciones de Geardon."
 L["You are not in a group; the window shows only you."] = "No estás en ningún grupo; la ventana solo te muestra a ti."
 L["Inspecting your group again (out of combat, one player at a time)."] = "Volviendo a inspeccionar a tu grupo (fuera de combate, de uno en uno)."
 
@@ -78,8 +77,6 @@ L["Inspecting your group again (out of combat, one player at a time)."] = "Volvi
 L["Diagnostics"] = "Diagnóstico"
 L["Diagnostics:"] = "Diagnóstico:"
 L["Close"] = "Cerrar"
-L["Report to copy"] = "Informe para copiar"
-L["/gd diag chat prints everything to the chat. In the report: Ctrl+A, Ctrl+C copies it."] = "/gd diag chat lo escribe todo en el chat. En el informe: Ctrl+A y Ctrl+C para copiarlo."
 
 -- Options: pages and headers
 L["Where the item level appears on item icons."] = "Dónde aparece el nivel de objeto sobre los iconos."
@@ -213,7 +210,6 @@ L["Level ranges: %s"] = "Rangos de niveles: %s"
 L["%d-%d"] = "%d-%d"
 L["Bag cleanup"] = "Limpieza de bolsas"
 L["Nothing to clean up: no gear in your bags is worse than yours or unusable."] = "Nada que limpiar: ningún equipo de tus bolsas es peor que el tuyo ni inservible."
-L["%d more"] = "%d más"
 L["not usable"] = "no utilizable"
 L["Your character cannot use it."] = "Tu personaje no puede usarlo."
 L["Lower item level than what you wear, not of a higher quality."] = "Nivel de objeto inferior al que llevas, sin calidad superior."
@@ -284,3 +280,10 @@ L["Soon: levels above yours"] = "Pronto: niveles por encima del tuyo"
 L["How many levels above yours still count as soon. Default 3."] = "Cuántos niveles por encima del tuyo cuentan aún como pronto. Por defecto 3."
 L["One-hand and off-hand against two-hand"] = "Una mano y mano izquierda contra dos manos"
 L["While you wear a two-hand weapon, a one-hand weapon together with the best shield or off-hand item from your bags (or the other way round) gets a yellow arrow when both hands together are higher. The tooltip names the partner."] = "Si llevas un arma de dos manos, un arma de una mano junto con el mejor escudo u objeto de mano izquierda de tus bolsas (o al revés) recibe una flecha amarilla cuando ambas manos juntas son más altas. La descripción nombra la pareja."
+
+-- (02.11.2026, StyleKit 2 step 4) gear check and group window in the Don style, the shared copy window
+L["you wear %s"] = "llevas %s"
+L["not sure"] = "dudoso"
+L["not known yet"] = "aún desconocido"
+L["Ctrl+A, Ctrl+C copies the report."] = "Ctrl+A, Ctrl+C copia el informe."
+L["Select all"] = "Seleccionar todo"
