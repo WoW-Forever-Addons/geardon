@@ -1,5 +1,9 @@
 # Changes
 
+## 1.5.1
+
+- **Surnames on WoW Forever:** names are kept as first name and surname, as the game gives them: the group view shows and finds group members with their surname.
+
 ## 1.5.0
 
 - **The Don look:** the group window (`/gd group`) like Questdon's list: class symbol, name in class colour, source and age, the average on the right, the group average below; from 6 members one line each by raid group. The gear check (`/gd check`) is a window you can resize with your item level and weakest slot on top, four sections to fold, item rows with quality border, vendor prices and no limit of 25 rows. Diagnostics in the shared copy window.

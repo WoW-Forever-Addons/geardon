@@ -47,7 +47,7 @@ function ns.RememberLevel(guid, level, src, unit, weak, weakLevel)
   -- a message or inspect without the weakest slot keeps the one known before
   if ns.SLOT[weak or ""] and ns.Num(weakLevel) then e.weak, e.weakLevel = weak, weakLevel end
   if unit then
-    e.name = ns.Str(ns.Value(UnitName, unit)) or e.name
+    e.name = ns.Str((ns.UnitNameRealm(unit))) or e.name -- (05.11.2026) Forever: "Ratloff Ashbloom"
     local _, class = ns.Results(UnitClass, unit)
     e.class = ns.Str(class) or e.class
   end
@@ -144,7 +144,11 @@ local function UnitByName(sender)
     name = ns.Str(name)
     if name then
       realm = ns.Str(realm)
-      if (realm and (name .. "-" .. realm) == sender) or name == sender or name == short then return unit end
+      if ns.Surnames() then
+        -- (05.11.2026) Forever: the second value is the surname, the sender "Ratloff Ashbloom"
+        local full = realm and (name .. " " .. realm) or name
+        if full == sender or full == short then return unit end
+      elseif (realm and (name .. "-" .. realm) == sender) or name == sender or name == short then return unit end
     end
   end
   return nil
@@ -478,7 +482,7 @@ function ns.GroupLevels()
       local _, class = ns.Results(UnitClass, unit)
       list[#list + 1] = {
         unit = unit, guid = guid, level = level, src = src, t = t,
-        name = ns.Str(ns.Value(UnitName, unit)) or (levels[guid] and levels[guid].name) or "?",
+        name = ns.Str((ns.UnitNameRealm(unit))) or (levels[guid] and levels[guid].name) or "?",
         class = ns.Str(class), waiting = pending and pending.guid == guid,
         failed = failed[guid] and failed[guid] > Now(),
         weak = e and e.weak, weakLevel = e and e.weakLevel,
