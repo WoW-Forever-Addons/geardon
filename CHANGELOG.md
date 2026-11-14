@@ -1,5 +1,10 @@
 # Changes
 
+## 1.5.2
+
+- **Hidden surnames:** with surnames switched off in the game's options, your characters are still told apart correctly and the realm is never taken from the surname.
+- **Cleaner text in narrow places:** text that is shrunk to fit keeps one font and size, also after the game window changes its size.
+
 ## 1.5.1
 
 - **Surnames on WoW Forever:** names are kept as first name and surname, as the game gives them: the group view shows and finds group members with their surname.
