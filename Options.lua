@@ -111,6 +111,13 @@ local PAGES = {
     { header = "Loot, rewards and merchants" },
     { key = "numberPositionOther", kind = "dropdown", name = "Position (loot, rewards, merchants)", tip = "Where the number sits on loot, quest rewards and merchant items.", options = PositionOptions, onChange = Refresh },
     { key = "numberSizeOther", kind = "slider", name = "Size (loot, rewards, merchants)", tip = "Size of the number on loot, quest rewards and merchant items. Default 12.", min = 8, max = 18, step = 1, format = Points, onChange = Refresh },
+    -- (16.11.2026, Daniel 15.11.: "Das Blizzard layout von profitdon ... optional über alle addons ausrollen", 16.11.:
+    -- "Sollte Standart sein") the gear check, the group window and the copy window from the game's own templates
+    { header = "Windows" },
+    { key = "blizzLook", name = "Windows in the game's look", tip = "Geardon's windows look like the game's own: the gear check and the diagnostics window with the game's frame, buttons and lists, the group window on the game's tooltip ground. The options then open in the game's settings (Options > AddOns > Geardon) after a /reload.", onChange = function()
+      if ns.CheckReset then ns.CheckReset() end
+      if ns.ApplyGroupLook then ns.ApplyGroupLook() end
+    end },
   } },
   { title = "Upgrade arrow", tip = "When an item gets the upgrade arrow.", preview = Preview, items = {
     { header = "Arrow" },
@@ -166,7 +173,7 @@ local TOOLS = {
   { "Group window", "Show / hide", function() ns.ToggleGroupWindow() end, "Shows or hides the group window. /gd group",
     state = function() local p = _G.GeardonGroupPanel return p ~= nil and p:IsShown() and true or false end },
   { "Inspect group again", "Inspect", function() ns.RescanGroup(true) end, "Forgets inspected values and inspects your group again, out of combat. /gd scan" },
-  { "Gear check", "Show / hide", function() ns.ShowCheck() end, state = function() local p = _G.GeardonCheckPanel return p ~= nil and p:IsShown() and true or false end, "Upgrades in your bags, slots behind your level, dungeons for your level and bag items worse than yours with their vendor price. Only a list: nothing is sold, equipped or deleted. /gd check" },
+  { "Gear check", "Show / hide", function() ns.ShowCheck() end, state = function() return ns.CheckShown and ns.CheckShown() or false end, "Upgrades in your bags, slots behind your level, dungeons for your level and bag items worse than yours with their vendor price. Only a list: nothing is sold, equipped or deleted. /gd check" },
   { "Diagnostics", "Show", function() ns.ShowDiag() end, "Window with a report to copy for bug reports. /gd diag, in the chat: /gd diag chat" },
 }
 for _, t in ipairs(TOOLS) do t[3] = ns.Guard("tool", t[3]) end
@@ -178,13 +185,40 @@ local function Help()
   return table.concat(lines, "\n")
 end
 
-local function Build()
-  category = ns.BuildSettings({ name = "Geardon", status = Status, tools = TOOLS, pages = PAGES, help = Help })
+local fullPages = false
+-- what Blizzard's settings get (tests: SettingsSpec().fullPages)
+local function SettingsSpec()
+  local spec = { name = "Geardon", status = Status, tools = TOOLS, pages = PAGES, help = Help,
+    -- (16.11.2026, DonCore Options 6) with the option blizzLook every cog and /gd ends in the game's settings
+    redirect = function() return ns.OpenGameOptions and ns.OpenGameOptions() or false end }
+  -- (16.11.2026) the game's look: the full pages in the game's settings although DonCore's window is there (only where
+  -- the client has the templates: without them the windows are Don's and so is the options window). Built at login
+  -- only: a change of the option reaches the options after a /reload.
+  if ns.db and ns.db.blizzLook and select(2, ns.LookKit()) then spec.fullPages = true end
+  return spec
 end
+ns.SettingsSpec = SettingsSpec
+
+local function Build()
+  local spec = SettingsSpec()
+  fullPages = spec.fullPages and true or false
+  category = ns.BuildSettings(spec)
+end
+ns.BuildOptions = Build -- (tests: the pages as built at login)
+
+-- true when the game's settings were opened at Geardon (option blizzLook, pages built in full at login, not in combat)
+function ns.OpenGameOptions()
+  if not (ns.db and ns.db.blizzLook and fullPages and category and Settings and Settings.OpenToCategory) then return false end
+  if ns.InCombat() then ns.Print(L["Options cannot be opened in combat."]) return true end
+  Settings.OpenToCategory(category:GetID())
+  return true
+end
+function ns.OptionsLook() return fullPages and "game settings" or "don window" end
 
 -- (01.11.2026) DonCore's options window of all Don addons (no Blizzard panel, so also in combat); Blizzard's settings
 -- only when that window is not there (an older DonCore), and those stay closed in combat.
 function ns.OpenOptions()
+  if ns.OpenGameOptions() then return end -- (16.11.2026) the game's look: the game's settings
   if ns.OpenDonOptions and ns.OpenDonOptions() then return end
   if ns.InCombat() then
     ns.Print(L["Options cannot be opened in combat."])

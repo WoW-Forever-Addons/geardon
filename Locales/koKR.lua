@@ -287,3 +287,7 @@ L["not sure"] = "불확실"
 L["not known yet"] = "아직 모름"
 L["Ctrl+A, Ctrl+C copies the report."] = "Ctrl+A, Ctrl+C로 보고서를 복사합니다."
 L["Select all"] = "모두 선택"
+-- (16.11.2026) windows in the game's look (DonCore Blizz)
+L["Windows in the game's look"] = "게임 스타일의 창"
+L["Geardon's windows look like the game's own: the gear check and the diagnostics window with the game's frame, buttons and lists, the group window on the game's tooltip ground. The options then open in the game's settings (Options > AddOns > Geardon) after a /reload."] = "Geardon의 창이 게임 자체의 창처럼 보입니다: 장비 점검과 진단 창은 게임의 테두리, 버튼, 목록으로, 파티 창은 게임 툴팁 배경 위에 표시됩니다. 그러면 /reload 후 옵션이 게임 설정(설정 > 애드온 > Geardon)에서 열립니다."
+L["The gear check could not be built in the game's look, it opens in the Don look. /gd diag says why."] = "장비 점검을 게임 스타일로 만들 수 없어 Don 스타일로 엽니다. /gd diag에서 이유를 볼 수 있습니다."

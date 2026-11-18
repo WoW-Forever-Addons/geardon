@@ -199,6 +199,11 @@ local LOGO = "Interface\\Icons\\INV_Chest_Plate06"
 local QUESTION = "Interface\\Icons\\INV_Misc_QuestionMark"
 local DETAIL_FROM, DETAIL_W = 640, 280
 local W, selKey
+-- (16.11.2026, Blizzard look, Daniel: "Sollte Standart sein") the window takes its blocks from UI: the Kit, or with the
+-- option blizzLook the same blocks from the game's own templates (ns.LookKit). Picked when the window is built
+-- (PickUI); a build that fails with the game's blocks is done again with the Kit. ns.CheckLook() says which and why.
+local UI, lookNote = nil, "not built"
+local BLIZZ_W, BLIZZ_H = 400, 500 -- the Kit's windows show at 80 %, the game's frame at 100 %: about the same size
 
 local function GetKit() return LibStub("DonCore-1.0"):Get("Kit", 5) end
 
@@ -406,9 +411,9 @@ local function Place()
   local rw = 0
   if W.footRight:GetText() and W.footRight:GetText() ~= "" then
     rw = math.min(math.floor(w * 0.5), Kit.TextWidth and Kit.TextWidth(W.footRight) or 160)
-    Kit.Fit(W.footRight, rw)
+    W.ui.Fit(W.footRight, rw)
   end
-  if W.status then Kit.Fit(W.status, math.max(40, w - 40 - (rw > 0 and rw + 8 or 0))) end
+  if W.status then W.ui.Fit(W.status, math.max(40, w - 40 - (rw > 0 and rw + 8 or 0))) end
 end
 
 local function Draw()
@@ -444,9 +449,10 @@ end
 local function Build()
   local Kit = GetKit()
   local C = Kit.C
-  W = Kit.Window("GeardonCheckPanel", { title = "Geardon", subtitle = L["Gear check"], logo = LOGO,
-    options = "Geardon", hint = "/gd", footer = true, store = Store(), width = 440, height = 560,
-    min = { 340, 360 }, max = { 760, 900 },
+  local blizz = UI ~= Kit
+  W = UI.Window(blizz and "GeardonCheckPanelBlizz" or "GeardonCheckPanel", { title = "Geardon", subtitle = L["Gear check"], logo = LOGO,
+    options = "Geardon", hint = "/gd", footer = true, store = Store(), width = blizz and BLIZZ_W or 440, height = blizz and BLIZZ_H or 560,
+    min = { 340, 360 }, max = blizz and { 700, 840 } or { 760, 900 },
     onLayout = function(win, w, h)
       win.bw, win.bh = w, h
       if win.built then
@@ -454,10 +460,11 @@ local function Build()
         Place()
       end
     end })
+  W.ui, W.blizzLook = UI, blizz or nil
   W:Hide()
   W:SetScript("OnShow", function() Draw() end)
-  W.hero = Kit.Hero(W.body, { height = 64, column = 200 })
-  W.list = Kit.List(W.body, {
+  W.hero = UI.Hero(W.body, { height = 64, column = 200 })
+  W.list = UI.List(W.body, {
     onClick = function(it)
       if not it.tip then return end
       selKey, W.noDetail = it.key, nil
@@ -468,12 +475,47 @@ local function Build()
       Store().closed[it.key] = it.collapsed or nil
       Draw()
     end })
-  W.detail = Kit.Detail(W.body, { onClose = function() W.noDetail = true Place() end })
+  W.detail = UI.Detail(W.body, { onClose = function() W.noDetail = true Place() end })
   W.detail:Hide()
-  W.footRight = Kit.Text(W.footer, "sub", C.body, "RIGHT")
-  W.footRight:SetPoint("RIGHT", -24, 0)
+  -- the worth on the right of the foot (the game's frame: DonCore Blizz f.footer over the strip, already clear of the grip)
+  W.footRight = UI.Text(W.footer, "sub", C.body, "RIGHT")
+  W.footRight:SetPoint("RIGHT", blizz and -4 or -24, 0)
   W.built = true
   W:Layout()
+end
+
+local said
+local function SayLook()
+  if said then return end
+  said = true
+  ns.Print(L["The gear check could not be built in the game's look, it opens in the Don look. /gd diag says why."])
+end
+
+local function PickUI()
+  local Kit = GetKit()
+  UI, lookNote = Kit, "kit"
+  if not (ns.db and ns.db.blizzLook) then return end
+  local Bz = LibStub("DonCore-1.0"):Get("Blizz", 5)
+  -- (the option is on by default: a client that lacks the templates keeps the Don look without a word; only a build
+  -- that fails speaks up, Create)
+  if not Bz then lookNote = "kit (no DonCore Blizz)" return end
+  local kit, miss = Bz.Kit()
+  if not kit then lookNote = "kit (missing: " .. tostring(miss) .. ")" return end
+  UI, lookNote = kit, "blizzard"
+end
+
+local function Create()
+  PickUI()
+  if UI == GetKit() then Build() return end
+  -- the game's blocks: any error while building leaves the half-built window hidden and the Kit builds it
+  local ok, err = pcall(Build)
+  if ok then return end
+  if W and W.Hide then pcall(W.Hide, W) end
+  W = nil
+  UI, lookNote = GetKit(), "kit (error: " .. tostring(err) .. ")"
+  ns.RecordError("gear check blizz look", err)
+  SayLook()
+  Build()
 end
 
 local function Update()
@@ -491,7 +533,7 @@ end
 function ns.ShowCheck()
   if not GetKit() then return ns.Print(L["Gear check"] .. ": DonCore Kit?") end
   if W and W:IsShown() then W:Hide() return end
-  if not W then Build() end
+  if not W then Create() end
   W:Show()
   Draw()
 end
@@ -499,11 +541,26 @@ end
 function ns.ResetCheckWindow()
   local st = Store()
   st.point, st.relPoint, st.x, st.y, st.w, st.h = nil, nil, nil, nil, nil, nil
+  st.bz = nil -- the game's frame keeps its place and size there (DonCore Blizz)
   if W then
     W:ClearAllPoints()
     W:SetPoint("CENTER", UIParent, "CENTER", 260, 60)
-    W:SetSize(440, 560)
+    if W.blizzLook then W:SetSize(BLIZZ_W, BLIZZ_H) else W:SetSize(440, 560) end
   end
+end
+
+-- the window shown now, whichever look it was built in
+function ns.CheckShown() return W ~= nil and W:IsShown() and true or false end
+function ns.CheckFrame() return W end -- (tests)
+-- "blizzard" or "kit", with the reason when the option is on and the Kit had to build (diag)
+function ns.CheckLook() return lookNote end
+-- the option blizzLook changed: the window is built again in the other look the next time it opens (it was open: now)
+function ns.CheckReset()
+  if not W then return end
+  local open = W:IsShown()
+  W:Hide()
+  W = nil
+  if open then ns.ShowCheck() end
 end
 
 ns.On("BAG_UPDATE_DELAYED", function() ns.UpdateCheck() end)

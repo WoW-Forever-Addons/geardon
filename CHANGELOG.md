@@ -1,5 +1,10 @@
 # Changes
 
+## 1.6.0
+
+- **Geardon in the game's look:** the gear check, the group window and the report window now look like the game's own windows: the game's frame, tabs, buttons and lists. The options open in the game's settings (Options > AddOns > Geardon). This is the new default; the Don look is one switch away under Look, "Windows in the game's look".
+- **Shared Don library:** updated to the current version of the Don addons.
+
 ## 1.5.2
 
 - **Hidden surnames:** with surnames switched off in the game's options, your characters are still told apart correctly and the realm is never taken from the surname.

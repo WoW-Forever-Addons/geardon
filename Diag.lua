@@ -88,6 +88,9 @@ function ns.DiagLines()
   out[#out + 1] = ("1.3.0: soon %s (%s levels), pair %s, chat upgrade %s, inspect mine %s"):format(tostring(db.arrowSoon),
     tostring(db.soonLevels), tostring(db.arrowPair), tostring(db.chatUpgrade), tostring(db.inspectMine))
   out[#out + 1] = ("gear check: %s; dungeons %s; chat %s"):format(Kv(ns.checkStats), Kv(ns.dungeonStats), Kv(ns.changeStats))
+  -- (16.11.2026) the windows' look: the option, what the gear check was built as (and why), the group window, the options
+  out[#out + 1] = ("window look: option %s, gear check %s, group window %s, options %s"):format(tostring(db.blizzLook),
+    tostring(ns.CheckLook and ns.CheckLook()), tostring(ns.GroupLook and ns.GroupLook()), tostring(ns.OptionsLook and ns.OptionsLook()))
   -- (Leistungsrunde 6) kept judgements: computed, taken from the memo, not kept (data missing), DonData notices
   out[#out + 1] = ("judge: %s; kept now %s; DonData notices %s"):format(Kv(ns.judgeStats), tostring(ns.JudgeMemoOK and ns.JudgeMemoOK()),
     tostring(ns.donDataNotices or 0))
@@ -116,11 +119,19 @@ end
 -- (02.11.2026, StyleKit 2 step 4, docs/layout_2026-11-02/geardon/) DonCore's one copy window (Kit.ShowCopy, the same as
 -- Leveldon's export) instead of a panel with an edit box of our own.
 ---------------------------------------------------------------------------
+-- (16.11.2026, Blizzard look) with the option blizzLook the game's dialog (DonCore Blizz ShowCopy); should it fail, the Kit's
 function ns.ShowDiag()
   local Kit = LibStub("DonCore-1.0"):Get("Kit", 4)
   if not (Kit and Kit.ShowCopy) then return ns.PrintDiag() end
-  return Kit.ShowCopy("Geardon · " .. L["Diagnostics"], L["Ctrl+A, Ctrl+C copies the report."],
-    table.concat(ns.DiagLines(), "\n"), { selectAll = L["Select all"], close = L["Close"] })
+  local title, hint = "Geardon · " .. L["Diagnostics"], L["Ctrl+A, Ctrl+C copies the report."]
+  local text, words = table.concat(ns.DiagLines(), "\n"), { selectAll = L["Select all"], close = L["Close"] }
+  local UI, blizz = ns.LookKit()
+  if blizz and UI.ShowCopy then
+    local ok, d = pcall(UI.ShowCopy, title, hint, text, words)
+    if ok and d then return d end
+    ns.RecordError("diag blizz look", d)
+  end
+  return Kit.ShowCopy(title, hint, text, words)
 end
 
 ns.OnInit(function()

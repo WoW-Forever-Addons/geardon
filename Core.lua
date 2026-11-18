@@ -55,7 +55,23 @@ ns.defaults = {
   -- group
   groupScan = true,           -- inspect group members out of combat
   groupShare = true,          -- send and receive item level with Geardon users
+  -- (16.11.2026, Daniel: "Sollte Standart sein") the windows in the game's look (DonCore Blizz), on by default
+  blizzLook = true,
 }
+
+-- (16.11.2026, Daniel 15.11.: "Das Blizzard layout von profitdon gefällt mir so gut, dass ich es optional über alle
+-- addons ausrollen möchte", 16.11.: "Sollte Standart sein") Geardon's windows: DonCore's Kit, or with the option
+-- blizzLook the same blocks from the game's own templates (DonCore module Blizz). One place asks: the builder set, true
+-- when it is the game's, the module; without the client's templates (Era, test mocks) quietly the Kit.
+function ns.LookKit()
+  local Core = LibStub("DonCore-1.0")
+  local Kit = Core:Get("Kit", 5)
+  if not (ns.db and ns.db.blizzLook) then return Kit, false end
+  local Bz = Core:Get("Blizz", 5)
+  local kit = Bz and Bz.Kit()
+  if kit then return kit, true, Bz end
+  return Kit, false
+end
 
 ns.SCHEMA = 2 -- (1.2.0) 2: mouseoverLevel on by default
 ns.WORDMARK = "|cff3fa9f5Gear|rdon"

@@ -116,7 +116,26 @@ local function Build()
     -- (01.11.2026) the cog of every Don addon: Style.Panel takes symbol, click and tooltip from DonCore's Options
     buttons = { { key = "options", donOptions = "Geardon", hint = "/gd", onClick = function() ns.OpenOptions() end } },
   })
+  ns.ApplyGroupLook()
   return panel
+end
+
+-- (16.11.2026, Blizzard look, Daniel: "Sollte Standart sein") with the option blizzLook the small window in the game's
+-- look: Style's game look on a box with the game's tooltip border (DonCore Blizz PanelLook). Switched live with the option.
+function ns.ApplyGroupLook()
+  if not panel then return end
+  local _, blizz, Bz = ns.LookKit()
+  if blizz and Bz and Bz.PanelLook then
+    Bz.PanelLook(panel, true)
+  elseif panel.blizzLook then
+    local B = LibStub("DonCore-1.0"):Get("Blizz", 3)
+    if B then B.PanelLook(panel, false) end
+  end
+end
+-- "blizzard", "kit" or "not built" (diag)
+function ns.GroupLook()
+  if not panel then return "not built" end
+  return panel.blizzLook and "blizzard" or "kit"
 end
 
 -- the raid group (1 to 8) of a raid unit, nil outside a raid

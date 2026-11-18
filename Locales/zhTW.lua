@@ -287,3 +287,7 @@ L["not sure"] = "不確定"
 L["not known yet"] = "尚未得知"
 L["Ctrl+A, Ctrl+C copies the report."] = "Ctrl+A、Ctrl+C 複製報告。"
 L["Select all"] = "全選"
+-- (16.11.2026) windows in the game's look (DonCore Blizz)
+L["Windows in the game's look"] = "遊戲風格的視窗"
+L["Geardon's windows look like the game's own: the gear check and the diagnostics window with the game's frame, buttons and lists, the group window on the game's tooltip ground. The options then open in the game's settings (Options > AddOns > Geardon) after a /reload."] = "Geardon 的視窗看起來就像遊戲本身的視窗：裝備檢查與診斷視窗使用遊戲的框架、按鈕與清單，隊伍視窗顯示在遊戲提示資訊的底色上。之後選項會在 /reload 後於遊戲設定中開啟(選項 > 插件 > Geardon)。"
+L["The gear check could not be built in the game's look, it opens in the Don look. /gd diag says why."] = "無法以遊戲風格建立裝備檢查，改以 Don 風格開啟。/gd diag 會說明原因。"
