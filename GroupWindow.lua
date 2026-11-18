@@ -98,12 +98,20 @@ local function RowTooltip(m)
   end
 end
 
-local function Build()
+-- (18.11.2026, Daniel's screenshots: "GEARDON  GROUP" in capitals looked like the Don look on the game's box) the title
+-- per look: the Don look keeps the capitals with the gold word, the game's look writes "Geardon · Group" in the game's gold
+local function Title(blizz)
+  if blizz then return "Geardon · " .. L["Group"] end
   local Style, K = ns.Style, Kit()
   local word = K and K.Upper and K.Upper(L["Group"]) or L["Group"]
+  return "GEARDON  " .. (K and K.C.txGold.hex and ("|c" .. K.C.txGold.hex .. word .. "|r") or Style.Colorize(word, "accent"))
+end
+
+local function Build()
+  local Style = ns.Style
   panel = Style.Panel("GeardonGroupPanel", UIParent, {
     look = "don", logo = LOGO,
-    title = "GEARDON  " .. (K and K.C.txGold.hex and ("|c" .. K.C.txGold.hex .. word .. "|r") or Style.Colorize(word, "accent")),
+    title = Title(false),
     width = WIDTH,
     close = true,
     collapse = true,
@@ -131,6 +139,7 @@ function ns.ApplyGroupLook()
     local B = LibStub("DonCore-1.0"):Get("Blizz", 3)
     if B then B.PanelLook(panel, false) end
   end
+  if panel.SetTitle then panel:SetTitle(Title(panel.blizzLook and true or false)) end
 end
 -- "blizzard", "kit" or "not built" (diag)
 function ns.GroupLook()

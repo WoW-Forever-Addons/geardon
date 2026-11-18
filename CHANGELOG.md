@@ -1,5 +1,9 @@
 # Changes
 
+## 1.6.1
+
+- **Group window in the game's look:** the title reads "Geardon · Group" in the game's gold instead of capitals.
+
 ## 1.6.0
 
 - **Geardon in the game's look:** the gear check, the group window and the report window now look like the game's own windows: the game's frame, tabs, buttons and lists. The options open in the game's settings (Options > AddOns > Geardon). This is the new default; the Don look is one switch away under Look, "Windows in the game's look".
