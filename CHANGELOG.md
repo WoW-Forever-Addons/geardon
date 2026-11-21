@@ -1,5 +1,10 @@
 # Changes
 
+## 1.6.2
+
+- **One option for the window style:** the switch "Windows in the game's look" is now the choice "Window style" with "Don look" and "Blizzard look", named the same in every Don addon. Your setting stays as it was.
+- **Shared Don library:** updated to the current version of the Don addons.
+
 ## 1.6.1
 
 - **Group window in the game's look:** the title reads "Geardon · Group" in the game's gold instead of capitals.

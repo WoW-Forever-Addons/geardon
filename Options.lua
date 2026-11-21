@@ -114,10 +114,12 @@ local PAGES = {
     -- (16.11.2026, Daniel 15.11.: "Das Blizzard layout von profitdon ... optional über alle addons ausrollen", 16.11.:
     -- "Sollte Standart sein") the gear check, the group window and the copy window from the game's own templates
     { header = "Windows" },
-    { key = "blizzLook", name = "Windows in the game's look", tip = "Geardon's windows look like the game's own: the gear check and the diagnostics window with the game's frame, buttons and lists, the group window on the game's tooltip ground. The options then open in the game's settings (Options > AddOns > Geardon) after a /reload.", onChange = function()
+    -- (20.11.2026, Daniel: "bei allen addons den namen der option gleich machen") the choice "Window style" with
+    -- "Don look" / "Blizzard look" from DonCore (Settings minor 6), the same words in every Don addon; db.blizzLook stays
+    ns.LookOption({ addon = "Geardon", onChange = function()
       if ns.CheckReset then ns.CheckReset() end
       if ns.ApplyGroupLook then ns.ApplyGroupLook() end
-    end },
+    end }),
   } },
   { title = "Upgrade arrow", tip = "When an item gets the upgrade arrow.", preview = Preview, items = {
     { header = "Arrow" },

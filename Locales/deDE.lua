@@ -288,6 +288,4 @@ L["not known yet"] = "noch unbekannt"
 L["Ctrl+A, Ctrl+C copies the report."] = "Strg+A, Strg+C kopiert den Bericht."
 L["Select all"] = "Alles markieren"
 -- (16.11.2026) windows in the game's look (DonCore Blizz)
-L["Windows in the game's look"] = "Fenster im Look des Spiels"
-L["Geardon's windows look like the game's own: the gear check and the diagnostics window with the game's frame, buttons and lists, the group window on the game's tooltip ground. The options then open in the game's settings (Options > AddOns > Geardon) after a /reload."] = "Geardons Fenster sehen aus wie die des Spiels: Ausrüstungscheck und Diagnosefenster mit Rahmen, Knöpfen und Listen des Spiels, das Gruppenfenster auf dem Tooltip-Grund des Spiels. Die Optionen öffnen sich dann nach einem /reload in den Einstellungen des Spiels (Optionen > AddOns > Geardon)."
 L["The gear check could not be built in the game's look, it opens in the Don look. /gd diag says why."] = "Der Ausrüstungscheck ließ sich nicht im Look des Spiels bauen und öffnet im Don-Look. /gd diag sagt warum."

@@ -288,6 +288,4 @@ L["not known yet"] = "пока неизвестно"
 L["Ctrl+A, Ctrl+C copies the report."] = "Ctrl+A, Ctrl+C копирует отчет."
 L["Select all"] = "Выделить всё"
 -- (16.11.2026) windows in the game's look (DonCore Blizz)
-L["Windows in the game's look"] = "Окна в стиле игры"
-L["Geardon's windows look like the game's own: the gear check and the diagnostics window with the game's frame, buttons and lists, the group window on the game's tooltip ground. The options then open in the game's settings (Options > AddOns > Geardon) after a /reload."] = "Окна Geardon выглядят как окна самой игры: проверка экипировки и окно диагностики с рамкой, кнопками и списками игры, окно группы на фоне подсказок игры. Настройки тогда открываются в настройках игры (Настройки > Модификации > Geardon) после /reload."
 L["The gear check could not be built in the game's look, it opens in the Don look. /gd diag says why."] = "Проверку экипировки не удалось построить в стиле игры, она открывается в стиле Don. /gd diag покажет причину."
