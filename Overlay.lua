@@ -38,6 +38,22 @@ local function ArrowLook(tex, check)
   end
 end
 
+-- The arrow texture on any frame: our overlays and Baganator's corner widget.
+function ns.NewArrow(parent)
+  local tex = parent:CreateTexture(nil, "OVERLAY")
+  tex:SetSize(14, 14)
+  SetArrow(tex)
+  return tex
+end
+ns.ArrowLook = ArrowLook
+
+-- The arrow for a verdict of ns.IsUpgrade: nil (no arrow), else its look for
+-- ArrowLook: "soon" (grey), true (yellow) or false (green).
+function ns.ArrowCheck(upgrade, check, soon)
+  if not ((upgrade or soon) and ns.db and ns.db.upgradeArrow) then return nil end
+  return (not upgrade and "soon") or (check and true or false)
+end
+
 -- (1.2.0) Position and size per place: "character" (character frame, inspect
 -- frame, equipment flyout), "bags" (bags, bank, bag addons; the old keys) and
 -- "other" (loot, quest rewards, merchants).
@@ -93,10 +109,8 @@ local function Get(button)
   if level then o:SetFrameLevel(level + 4) end
   o.text = o:CreateFontString(nil, "OVERLAY", "NumberFontNormal")
   o.text:SetJustifyH("CENTER")
-  o.arrow = o:CreateTexture(nil, "OVERLAY")
-  o.arrow:SetSize(14, 14)
+  o.arrow = ns.NewArrow(o)
   o.arrow:SetPoint("TOPLEFT", o, "TOPLEFT", 1, -1)
-  SetArrow(o.arrow)
   o.arrow:Hide()
   overlays[button] = o
   stats.created = stats.created + 1
@@ -165,9 +179,9 @@ function ns.ShowLevel(button, level, quality, opts)
     r, g, b = r + (1 - r) * 0.35, g + (1 - g) * 0.35, b + (1 - b) * 0.35
   end
   o.text:SetTextColor(r, g, b)
-  local arrow = level and opts and (opts.upgrade or opts.soon) and ns.db and ns.db.upgradeArrow and true or false
-  if arrow then ArrowLook(o.arrow, (not opts.upgrade and "soon") or (opts.check and true or false)) end
-  o.arrow:SetShown(arrow)
+  local look = level and opts and ns.ArrowCheck(opts.upgrade, opts.check, opts.soon)
+  if look ~= nil then ArrowLook(o.arrow, look) end
+  o.arrow:SetShown(look ~= nil)
   SetBoE(o, boe and true or false)
   if not o:IsShown() then o:Show() end
   o._on = true

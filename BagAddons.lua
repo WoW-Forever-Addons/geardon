@@ -7,8 +7,8 @@ local L = ns.L
 --
 -- Baganator: its public API (Baganator.API).
 --   RegisterCornerWidget(label, id, onUpdate, onInit, defaultPosition, isFast):
---     onInit(itemButton) returns the widget (our own font string on their
---     button), onUpdate(widget, details) gets details.itemLink (and
+--     onInit(itemButton) returns the widget (our own font string or arrow
+--     texture on their button), onUpdate(widget, details) gets details.itemLink (and
 --     details.itemLocation) and returns true (shown), false (nothing to show)
 --     or nil (data not there yet: Baganator asks again).
 --   RegisterUpgradePlugin(label, id, callback(itemLink)): true / false / nil
@@ -128,6 +128,20 @@ local function BoEUpdate(fs, details)
   return false
 end
 
+-- The upgrade arrow as on Blizzard's bags and Bagnon: the same texture, look
+-- and options (ns.NewArrow, ns.ArrowCheck in Overlay.lua), on the items that
+-- get a number.
+local function ArrowUpdate(tex, details)
+  if not On() then return false end
+  local info = InfoFor(details)
+  if not info then return info end
+  if not (ns.IsGear(info) and ns.QualityShown(info.quality)) then return false end
+  local look = ns.ArrowCheck(ns.IsUpgrade(info))
+  if look == nil then return false end
+  ns.ArrowLook(tex, look)
+  return true
+end
+
 -- Upgrade plugin: Baganator passes the item link (a table with itemLink is accepted too).
 local function UpgradeCheck(arg)
   if not On() then return false end
@@ -154,7 +168,9 @@ local function SetupBaganator()
       ns.Guard("baganator:level", LevelUpdate), ns.Guard("baganator:init", LevelInit), { corner = "bottom_left", priority = 1 }, true)
     local ok2 = pcall(api.RegisterCornerWidget, L["Geardon: BoE"], "geardon_boe",
       ns.Guard("baganator:boe", BoEUpdate), ns.Guard("baganator:init", BoEInit), { corner = "top_right", priority = 2 }, true)
-    parts[#parts + 1] = "corners " .. (ok1 and "ok" or "failed") .. "/" .. (ok2 and "ok" or "failed")
+    local ok3 = pcall(api.RegisterCornerWidget, L["Geardon: upgrade arrow"], "geardon_upgrade_arrow",
+      ns.Guard("baganator:arrow", ArrowUpdate), ns.Guard("baganator:init", ns.NewArrow), { corner = "bottom_right", priority = 2 }, true)
+    parts[#parts + 1] = "corners " .. (ok1 and "ok" or "failed") .. "/" .. (ok2 and "ok" or "failed") .. "/" .. (ok3 and "ok" or "failed")
   else
     parts[#parts + 1] = "no corner widgets"
   end
