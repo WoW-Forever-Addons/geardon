@@ -410,7 +410,8 @@ function ns.JudgeIncomplete() incomplete = true end
 function ns.ForgetJudge(link)
   if link and memo[link] then memo[link] = nil memoN = memoN - 1 end
 end
-local FIELDS = { "diff", "slot", "eqLevel", "loses2H", "upgrade", "check", "block", "note", "soon", "partner", "pairGain" }
+local FIELDS = { "diff", "slot", "eqLevel", "loses2H", "upgrade", "check", "block", "note", "soon", "partner", "pairGain",
+  "byLevel" }
 local function CopyInto(src, dst)
   for i = 1, #FIELDS do local k = FIELDS[i] dst[k] = src[k] end
   return dst
@@ -483,6 +484,8 @@ function Compute(info, v)
   -- (1.4.0, Daniel 31.10.2026) with DonData's judgement (DonDataAPI 3) the weapon's DPS is in the value: weapons go by
   -- it like armor, the item level only breaks a tie
   if sc ~= nil and ns.SharedGear and ns.SharedGear() then weapon = false end
+  -- (24.11.2026) the tooltip's verdict goes by the item level where the arrow does (weapons by their damage)
+  v.byLevel = weapon or nil
   local statsUp = sc == 1 and diff <= 0 and (not weapon or higherQ)
   local statsDown = sc == -1 and (not weapon or lowerQ)
   if loses2H then sc = nil end

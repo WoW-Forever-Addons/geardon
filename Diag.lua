@@ -89,8 +89,9 @@ function ns.DiagLines()
     tostring(db.soonLevels), tostring(db.arrowPair), tostring(db.chatUpgrade), tostring(db.inspectMine))
   out[#out + 1] = ("gear check: %s; dungeons %s; chat %s"):format(Kv(ns.checkStats), Kv(ns.dungeonStats), Kv(ns.changeStats))
   -- (16.11.2026) the windows' look: the option, what the gear check was built as (and why), the group window, the options
+  local Opt = LibStub("DonCore-1.0"):Get("Options", 8)
   out[#out + 1] = ("window look: option %s, gear check %s, group window %s, options %s"):format(tostring(db.blizzLook),
-    tostring(ns.CheckLook and ns.CheckLook()), tostring(ns.GroupLook and ns.GroupLook()), tostring(ns.OptionsLook and ns.OptionsLook()))
+    tostring(ns.CheckLook and ns.CheckLook()), tostring(ns.GroupLook and ns.GroupLook()), tostring(Opt and Opt.Look and Opt.Look()))
   -- (Leistungsrunde 6) kept judgements: computed, taken from the memo, not kept (data missing), DonData notices
   out[#out + 1] = ("judge: %s; kept now %s; DonData notices %s"):format(Kv(ns.judgeStats), tostring(ns.JudgeMemoOK and ns.JudgeMemoOK()),
     tostring(ns.donDataNotices or 0))

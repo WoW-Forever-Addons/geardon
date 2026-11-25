@@ -84,7 +84,7 @@ local PAGES = {
     { key = "behindMarker", name = "Mark slots behind your level", tip = "An equipped item whose item level is far below your level gets its number in red. The tooltip of your average on the character frame and the gear check (/gd check) list these slots.", parent = "showCharacter", onChange = Refresh },
     { key = "behindLevels", kind = "slider", name = "Behind: levels below yours", tip = "An item counts as behind when its item level is more than this many below your level. Default 8: at level 30, items below item level 22.", min = 3, max = 20, step = 1, format = Points, parent = "behindMarker", onChange = Refresh },
     { key = "showInspect", name = "Inspect frame", tip = "Item level per slot and the average of the inspected player. Blizzard's Forever inspect frame shows neither.", onChange = Refresh },
-    { key = "inspectMine", name = "Your average on the inspect frame", tip = "Your own average item level as a grey note next to that of the inspected player.", parent = "showInspect", onChange = Refresh },
+    { key = "inspectMine", name = "Your average beside theirs", tip = "Your own average item level as a grey note next to that of the inspected player.", parent = "showInspect", onChange = Refresh },
     { key = "showBags", name = "Bags", tip = "Item level on weapons and armor in your bags.", onChange = Refresh },
     { key = "bagAddons", name = "Baganator and Bagnon", tip = "Also in the bags of Baganator and Bagnon. Baganator: choose Geardon in its icon corner options and as its upgrade plugin.", parent = "showBags", onChange = Refresh },
     { key = "boeMarker", name = "BoE in bags", tip = "BoE in the top right corner of items that bind when equipped and are not bound yet.", parent = "showBags", onChange = Refresh },
@@ -94,8 +94,8 @@ local PAGES = {
     { key = "showMerchant", name = "Merchant", tip = "Item level and upgrade arrow on gear a merchant sells and in the buyback tab.", onChange = Refresh },
     { key = "showRewards", name = "Quest rewards", tip = "Item level on quest rewards, at the quest giver and in the quest details of the map.", onChange = Refresh },
     { header = "Chat" },
-    { key = "chatChange", name = "Chat line when your item level changes", tip = "One line in the chat when your average changes, with the slots that changed, e.g. Item level 24.3 -> 25.1 (Head +6). Not on login; quick swaps make one line.", onChange = Refresh },
-    { key = "chatUpgrade", name = "Chat line for an upgrade in your bags", tip = "One line in the chat when an upgrade comes into your bags (loot, quest, mail, trade), with the slot and the gain, e.g. Upgrade in your bags: [Helm] (Head +6). Once per item, not on login, never for gear you swap.", onChange = Refresh },
+    { key = "chatChange", name = "Chat: item level changes", tip = "One line in the chat when your average changes, with the slots that changed, e.g. Item level 24.3 -> 25.1 (Head +6). Not on login; quick swaps make one line.", onChange = Refresh },
+    { key = "chatUpgrade", name = "Chat: upgrade in your bags", tip = "One line in the chat when an upgrade comes into your bags (loot, quest, mail, trade), with the slot and the gain, e.g. Upgrade in your bags: [Helm] (Head +6). Once per item, not on login, never for gear you swap.", onChange = Refresh },
   } },
   { title = "Look", tip = "Position, size and colour of the numbers.", preview = Preview, items = {
     { header = "All places" },
@@ -109,8 +109,8 @@ local PAGES = {
     { key = "numberPosition", kind = "dropdown", name = "Position (bags)", tip = "Where the number sits on items in your bags, your bank and the bags of Baganator and Bagnon.", options = PositionOptions, onChange = Refresh },
     { key = "numberSize", kind = "slider", name = "Size (bags)", tip = "Size of the number in your bags and your bank. Default 12.", min = 8, max = 18, step = 1, format = Points, onChange = Refresh },
     { header = "Loot, rewards and merchants" },
-    { key = "numberPositionOther", kind = "dropdown", name = "Position (loot, rewards, merchants)", tip = "Where the number sits on loot, quest rewards and merchant items.", options = PositionOptions, onChange = Refresh },
-    { key = "numberSizeOther", kind = "slider", name = "Size (loot, rewards, merchants)", tip = "Size of the number on loot, quest rewards and merchant items. Default 12.", min = 8, max = 18, step = 1, format = Points, onChange = Refresh },
+    { key = "numberPositionOther", kind = "dropdown", name = "Position (loot, merchants)", tip = "Where the number sits on loot, quest rewards and merchant items.", options = PositionOptions, onChange = Refresh },
+    { key = "numberSizeOther", kind = "slider", name = "Size (loot, merchants)", tip = "Size of the number on loot, quest rewards and merchant items. Default 12.", min = 8, max = 18, step = 1, format = Points, onChange = Refresh },
     -- (16.11.2026, Daniel 15.11.: "Das Blizzard layout von profitdon ... optional über alle addons ausrollen", 16.11.:
     -- "Sollte Standart sein") the gear check, the group window and the copy window from the game's own templates
     { header = "Windows" },
@@ -130,18 +130,18 @@ local PAGES = {
     { header = "What counts" },
     { key = "arrowWeaponMatch", name = "Only weapon types you use", tip = "A weapon gets the arrow only if you wear one of its type now (e.g. a hunter with a polearm: no arrow on swords; a bow, gun or crossbow for a bow). An empty slot takes any weapon.", onChange = Refresh },
     { key = "arrowBestArmor", name = "Only your best armor type", tip = "Armor gets the arrow only in the best type you can wear: from what you know (mail or plate from level 40 for some classes) and what you wear. Off: anything you can wear.", onChange = Refresh },
-    { key = "arrowMainStats", name = "Only items with your main stats", tip = "No arrow on items whose stats none of your class's specs use (e.g. Intellect and Spirit for a rogue). Items without stats keep the arrow.", onChange = Refresh },
+    { key = "arrowMainStats", name = "Only your main stats", tip = "No arrow on items whose stats none of your class's specs use (e.g. Intellect and Spirit for a rogue). Items without stats keep the arrow.", onChange = Refresh },
     { key = "arrowStatValue", name = "By stat value for your class", tip = "Weighs the stats for your class and talent tree, the same way as Questdon's reward suggestion: an item gets the arrow when it is worth more to you than your item, also at a lower item level, and none when it is worth less. With DonData the armor and the weapon DPS count as well (wands by their DPS first, ranged weapons of classes other than hunters by their stats, the item level only when all else is alike). Without DonData armor, rings, necks, trinkets and the weapons of casters go by their stats, other weapons, ranged weapons and wands by item level.", onChange = Refresh },
-    { key = "arrowPair", name = "One-hand and off-hand against two-hand", tip = "While you wear a two-hand weapon, a one-hand weapon together with the best shield or off-hand item from your bags (or the other way round) gets a yellow arrow when both hands together are higher. The tooltip names the partner.", onChange = Refresh },
+    { key = "arrowPair", name = "One-hand pair vs. two-hand", tip = "While you wear a two-hand weapon, a one-hand weapon together with the best shield or off-hand item from your bags (or the other way round) gets a yellow arrow when both hands together are higher. The tooltip names the partner.", onChange = Refresh },
   } },
   { title = "Tooltips", tip = "Item level and comparison in item and player tooltips.", items = {
     { header = "Items" },
     { key = "tooltipLevel", name = "Item level line", tip = "Adds Item level 18 to item tooltips, only when the game's tooltip has no item level line of its own.", onChange = Refresh },
-    { key = "tooltipCompare", name = "Compare with your item", tip = "Adds the difference to what you wear in that slot, e.g. +3 vs. Head (15). Rings, trinkets and one-hand weapons compare with the weaker of your two, an empty slot counts as 0.", onChange = Refresh },
+    { key = "tooltipCompare", name = "Compare with your item", tip = "A verdict on top, e.g. Worse than [Bonebiter] (Main Hand) -25%: by the value for your class where the upgrade arrow goes by it, else by item level. Below it this item's item level and value, and on the right those of the item you wear. Rings, trinkets and one-hand weapons compare with the weaker of your two.", onChange = Refresh },
     { key = "tooltipStatSplit", name = "Stat split", tip = "How the item's primary stats are split, e.g. Agility 60% · Stamina 40%, from the stats the game shows.", onChange = Refresh },
     { header = "Players" },
     { key = "unitTooltip", name = "Item level of players", tip = "Average item level in the tooltip of group members Geardon has inspected or that use Geardon.", onChange = Refresh },
-    { key = "mouseoverLevel", name = "Players you point at or target", tip = "Also inspects players outside your group when you point at them or target them, and adds their item level to the open tooltip: out of combat, never while the inspect window is open, one player every few seconds. In combat the last known value is shown.", parent = "unitTooltip", onChange = Refresh },
+    { key = "mouseoverLevel", name = "Mouseover and target", tip = "Also inspects players outside your group when you point at them or target them, and adds their item level to the open tooltip: out of combat, never while the inspect window is open, one player every few seconds. In combat the last known value is shown.", parent = "unitTooltip", onChange = Refresh },
   } },
   { title = "Group", tip = "Item level of your group: inspected out of combat or sent by Geardon.", items = {
     { header = "Sources" },
@@ -187,40 +187,19 @@ local function Help()
   return table.concat(lines, "\n")
 end
 
-local fullPages = false
--- what Blizzard's settings get (tests: SettingsSpec().fullPages)
 local function SettingsSpec()
-  local spec = { name = "Geardon", status = Status, tools = TOOLS, pages = PAGES, help = Help,
-    -- (16.11.2026, DonCore Options 6) with the option blizzLook every cog and /gd ends in the game's settings
-    redirect = function() return ns.OpenGameOptions and ns.OpenGameOptions() or false end }
-  -- (16.11.2026) the game's look: the full pages in the game's settings although DonCore's window is there (only where
-  -- the client has the templates: without them the windows are Don's and so is the options window). Built at login
-  -- only: a change of the option reaches the options after a /reload.
-  if ns.db and ns.db.blizzLook and select(2, ns.LookKit()) then spec.fullPages = true end
-  return spec
+  return { name = "Geardon", status = Status, tools = TOOLS, pages = PAGES, help = Help }
 end
 ns.SettingsSpec = SettingsSpec
 
 local function Build()
-  local spec = SettingsSpec()
-  fullPages = spec.fullPages and true or false
-  category = ns.BuildSettings(spec)
+  category = ns.BuildSettings(SettingsSpec())
 end
 ns.BuildOptions = Build -- (tests: the pages as built at login)
-
--- true when the game's settings were opened at Geardon (option blizzLook, pages built in full at login, not in combat)
-function ns.OpenGameOptions()
-  if not (ns.db and ns.db.blizzLook and fullPages and category and Settings and Settings.OpenToCategory) then return false end
-  if ns.InCombat() then ns.Print(L["Options cannot be opened in combat."]) return true end
-  Settings.OpenToCategory(category:GetID())
-  return true
-end
-function ns.OptionsLook() return fullPages and "game settings" or "don window" end
 
 -- (01.11.2026) DonCore's options window of all Don addons (no Blizzard panel, so also in combat); Blizzard's settings
 -- only when that window is not there (an older DonCore), and those stay closed in combat.
 function ns.OpenOptions()
-  if ns.OpenGameOptions() then return end -- (16.11.2026) the game's look: the game's settings
   if ns.OpenDonOptions and ns.OpenDonOptions() then return end
   if ns.InCombat() then
     ns.Print(L["Options cannot be opened in combat."])

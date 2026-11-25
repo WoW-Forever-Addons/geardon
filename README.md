@@ -20,7 +20,7 @@ Geardon braucht kein anderes Addon. Ist **DonData** da (kommt mit Questdon und L
 - Englisch, Deutsch, Französisch, Spanisch (Spanien und Lateinamerika), brasilianisches Portugiesisch, Russisch, Koreanisch und traditionelles Chinesisch.
 
 ## Befehle
-- `/gd` Optionen (auch unter Esc > Optionen > AddOns > Geardon)
+- `/gd` Optionen (eigenes Optionsfenster nur für Geardon; unter Esc > Optionen > AddOns steht ein Knopf dorthin)
 - `/gd group` Gruppenfenster zeigen oder ausblenden
 - `/gd check` Ausrüstungscheck
 - `/gd scan` Gruppe neu betrachten

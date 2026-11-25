@@ -58,11 +58,78 @@ local function Rgb(key)
   return 1, 1, 1
 end
 
+-- (24.11.2026, Fenstercheck, Daniel: "nicht so eindeutig, was was ist") the comparison as a verdict on top
+-- ("Worse than [Bonebiter] (Main Hand)   -25%"), then this item's values on the left and the worn item's on the right
+local GOOD, BAD, SAME = { 0.4, 0.8, 0.45 }, { 0.92, 0.35, 0.32 }, { 0.62, 0.64, 0.68 }
+
+-- rings and trinkets: the slot with its number (the game calls both slots "Finger" or "Trinket")
+local PAIR_NO = { Finger0Slot = 1, Finger1Slot = 2, Trinket0Slot = 1, Trinket1Slot = 2 }
+local function SlotText(slot)
+  local label = ns.SlotLabel(slot)
+  local n = PAIR_NO[slot]
+  if n and not label:find("%d") then label = label .. " " .. n end
+  return label
+end
+
+-- the item's name in its quality colour, from its link
+local function ItemName(e)
+  local link = e and ns.Str(e.link)
+  local name = link and link:match("%[(.-)%]")
+  if not name then return nil end
+  local color = link:match("^(|c%x%x%x%x%x%x%x%x)")
+  return color and (color .. name .. "|r") or name
+end
+
+-- what the item is compared with, e.g. "[Bonebiter] (Main Hand)"; a two-hand weapon against both hands names both;
+-- nil: the slot is empty
+local function WornText(info, slot)
+  local eq = ns.Equipped()
+  local names = {}
+  names[#names + 1] = ItemName(eq[slot])
+  if info.equipLoc == "INVTYPE_2HWEAPON" and slot == "MainHandSlot" then
+    local mh = eq.MainHandSlot
+    if not (mh and mh.equipLoc == "INVTYPE_2HWEAPON") then names[#names + 1] = ItemName(eq.SecondaryHandSlot) end
+  end
+  if #names == 0 then return nil end
+  return table.concat(names, " + ") .. " (" .. SlotText(slot) .. ")"
+end
+
 local function DiffText(diff)
   local r = math.floor(diff * 10 + 0.5) / 10
   if r > 0 then return "|cff66cc73+" .. ns.FormatLevel(r) .. "|r" end
   if r < 0 then return "|cffeb5952-" .. ns.FormatLevel(-r) .. "|r" end
   return "|cff9ea3ad=|r"
+end
+
+local function Signed(x)
+  local r = math.floor(math.abs(x) * 10 + 0.5) / 10
+  if r == 0 then return nil end
+  return (x > 0 and "+" or "-") .. ns.FormatLevel(r)
+end
+
+-- The verdict: by the value for your class when the arrow goes by it, else by the item level (weapons without
+-- DonData, the option "By stat value" off; a one-hand weapon against your two-hand weapon counts alone). Returns the left text,
+-- the right text and the colour.
+local function Verdict(info, v, worth, worthOld)
+  local worn = WornText(info, v.slot)
+  if not worn then return L["Better: your %s slot is empty"]:format(SlotText(v.slot)), nil, GOOD end
+  local sign, right = 0, nil
+  if worth and worthOld and (worth > 0 or worthOld > 0) and not v.byLevel then
+    if worthOld > 0 then
+      local p = math.floor((worth - worthOld) / worthOld * 100 + 0.5)
+      sign = p > 0 and 1 or (p < 0 and -1 or 0)
+      if p ~= 0 then right = ("%+d%%"):format(p) end
+    else
+      sign = 1
+    end
+  else
+    local d = Signed(v.diff or 0)
+    sign = (d and v.diff > 0 and 1) or (d and -1) or 0
+    if d then right = L["Item level %s"]:format(d) end
+  end
+  if sign > 0 then return L["Better than %s"]:format(worn), right, GOOD end
+  if sign < 0 then return L["Worse than %s"]:format(worn), right, BAD end
+  return L["As good as %s"]:format(worn), right, SAME
 end
 
 -- (1.2.0, Daniel 10.10.) Why an item that is higher than yours has no arrow,
@@ -105,33 +172,39 @@ local function OnItem(tooltip, data)
   end
   local diff, slot, eqLevel = v and v.diff, v and v.slot, v and v.eqLevel
   local split = kind == "full" and ns.db.tooltipStatSplit and ns.StatSplitText(ns.ItemStats(info, type(data) == "table" and data.lines))
-  -- (1.2.2) the stat value for your class against your item in that slot
+  -- (1.2.2) the stat value for your class against your item in that slot (24.11.2026: also without the stat split line,
+  -- the verdict uses it)
   local worth, worthOld
-  if split and slot and ns.db.arrowStatValue ~= false and ns.StatValues then worth, worthOld = ns.StatValues(info, slot) end
+  if slot and ns.db.arrowStatValue ~= false and ns.StatValues then worth, worthOld = ns.StatValues(info, slot) end
   if not showLevel and not diff and not split then return end
   local nr, ng, nb = 1, 0.82, 0 -- Blizzard's yellow for item level
   local sr, sg, sb = Rgb("textSecondary")
-  if showLevel or diff then
-    local left = showLevel and L["Item level %s"]:format(ns.FormatLevel(info.level)) or " "
-    if diff then
-      local where = (eqLevel and eqLevel > 0)
-        and L["%s vs. %s (%s)"]:format(DiffText(diff), ns.SlotLabel(slot), ns.FormatLevel(eqLevel))
-        or L["%s, %s slot empty"]:format(DiffText(diff), ns.SlotLabel(slot))
-      if not showLevel then left = L["Item level"] end
-      tooltip:AddDoubleLine(left, where, nr, ng, nb, sr, sg, sb)
-      stats.compare = stats.compare + 1
+  local worn = diff and WornText(info, slot)
+  if diff then
+    local left, right, c = Verdict(info, v, worth, worthOld)
+    if right then
+      tooltip:AddDoubleLine(left, right, c[1], c[2], c[3], c[1], c[2], c[3])
+    else
+      tooltip:AddLine(left, c[1], c[2], c[3], true)
+    end
+    stats.compare = stats.compare + 1
+  end
+  if showLevel or worn then
+    local left = showLevel and L["Item level %s"]:format(ns.FormatLevel(info.level)) or L["Item level"]
+    if worn then
+      tooltip:AddDoubleLine(left, L["worn %s"]:format(ns.FormatLevel(eqLevel or 0)), nr, ng, nb, sr, sg, sb)
     else
       tooltip:AddLine(left, nr, ng, nb)
     end
     if showLevel then stats.levelAdded = stats.levelAdded + 1 end
   end
+  if worth and (worth > 0 or worthOld > 0) then
+    tooltip:AddDoubleLine(L["Stat value for you"] .. " " .. ns.FormatLevel(worth),
+      worn and L["worn %s"]:format(ns.FormatLevel(worthOld)) or " ", sr, sg, sb, sr, sg, sb)
+  end
   if split then
     tooltip:AddLine(split, sr, sg, sb)
     stats.split = (stats.split or 0) + 1
-  end
-  if worth and (worth > 0 or worthOld > 0) then
-    tooltip:AddDoubleLine(L["Stat value for you"], L["%s (yours %s)"]:format(ns.FormatLevel(worth), ns.FormatLevel(worthOld)),
-      sr, sg, sb, sr, sg, sb)
   end
   if v then
     local wr, wg, wb = Rgb("warning")

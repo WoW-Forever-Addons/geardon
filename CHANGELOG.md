@@ -1,5 +1,13 @@
 # Changes
 
+## 1.7.0
+
+- **Clear verdict in the tooltip:** the item tooltip now opens with one line against your worn item, for example "Worse than [Bonebiter] (Main Hand)" with the difference beside it, in green when it is better, red when it is worse and grey when it is as good. Below it, item level and value stand next to the worn item's. Rings and trinkets name the slot (1 or 2).
+- **One options window per addon:** the options button, the gear icon and `/gd` open only Geardon's own options. The game's AddOns list keeps a single button that leads there.
+- **Lists in the game's look:** group headers in lists look like the game's own bars, with plus and minus on the right. Wide tooltips in lists appear beside the mouse and no longer cover the search box.
+- **Shorter option names:** names that were too long for the window are shortened in all nine languages.
+- **Shared Don library:** updated to the current version of the Don addons.
+
 ## 1.6.2
 
 - **One option for the window style:** the switch "Windows in the game's look" is now the choice "Window style" with "Don look" and "Blizzard look", named the same in every Don addon. Your setting stays as it was.
