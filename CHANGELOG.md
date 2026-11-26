@@ -1,5 +1,9 @@
 # Changes
 
+## 1.7.1
+
+- **Upgrade arrow in Baganator:** Baganator does not draw an upgrade arrow on its icons by itself, so upgrades in Baganator's bags had none. Geardon now adds its own arrow there (the same as in the game's bags), top left; Baganator puts it in place by itself.
+
 ## 1.7.0
 
 - **Clear verdict in the tooltip:** the item tooltip now opens with one line against your worn item, for example "Worse than [Bonebiter] (Main Hand)" with the difference beside it, in green when it is better, red when it is worse and grey when it is as good. Below it, item level and value stand next to the worn item's. Rings and trinkets name the slot (1 or 2).

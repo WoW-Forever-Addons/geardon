@@ -38,6 +38,27 @@ local function ArrowLook(tex, check)
   end
 end
 
+-- (1.7.1, 26.11.2026) the same arrow with a dark rim for other places (Baganator's corner, BagAddons.lua): returns a
+-- holder with :Look(check) (check true: yellow, "soon": grey), :SetShown(on) and :SetPoint(...)
+function ns.NewArrow(parent, size)
+  size = size or 14
+  local h = {}
+  h.back = parent:CreateTexture(nil, "OVERLAY", nil, 1)
+  h.back:SetSize(size + 4, size + 4)
+  SetArrow(h.back)
+  if h.back.SetDesaturated then pcall(h.back.SetDesaturated, h.back, true) end
+  h.back:SetVertexColor(0, 0, 0, 0.9)
+  h.arrow = parent:CreateTexture(nil, "OVERLAY", nil, 2)
+  h.arrow:SetSize(size, size)
+  h.arrow:SetPoint("CENTER", h.back, "CENTER", 0, 0)
+  SetArrow(h.arrow)
+  function h:Look(check) ArrowLook(self.arrow, check) end
+  function h:SetShown(on) self.back:SetShown(on and true or false) self.arrow:SetShown(on and true or false) end
+  function h:SetPoint(...) self.back:ClearAllPoints() self.back:SetPoint(...) end
+  h:SetShown(false)
+  return h
+end
+
 -- (1.2.0) Position and size per place: "character" (character frame, inspect
 -- frame, equipment flyout), "bags" (bags, bank, bag addons; the old keys) and
 -- "other" (loot, quest rewards, merchants).

@@ -291,3 +291,4 @@ L["Ctrl+A, Ctrl+C copies the report."] = "Ctrl+A、Ctrl+C 複製報告。"
 L["Select all"] = "全選"
 -- (16.11.2026) windows in the game's look (DonCore Blizz)
 L["The gear check could not be built in the game's look, it opens in the Don look. /gd diag says why."] = "無法以遊戲風格建立裝備檢查，改以 Don 風格開啟。/gd diag 會說明原因。"
+L["Geardon: upgrade arrow"] = "Geardon：升級箭頭"

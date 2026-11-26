@@ -128,6 +128,31 @@ local function BoEUpdate(fs, details)
   return false
 end
 
+-- (26.11.2026, Daniel with a picture of Baganator: "kein pfeil?") Baganator draws no upgrade arrow on its icons: its
+-- upgrade plugin (below) only feeds its "Upgrades" category and search. Geardon's arrow (the same as in the game's bags,
+-- ns.NewArrow, green / yellow / grey) is a corner widget of its own, top left.
+local function ArrowInit(itemButton)
+  local f = CreateFrame("Frame", nil, itemButton)
+  f:SetSize(18, 18)
+  if f.EnableMouse then f:EnableMouse(false) end
+  f.arrow = ns.NewArrow(f, 16)
+  f.arrow:SetPoint("CENTER", f, "CENTER", 0, 0)
+  f.arrow:SetShown(true)
+  f._geardon = true
+  return f
+end
+
+local function ArrowUpdate(f, details)
+  if not (On() and ns.db.upgradeArrow) then return false end
+  local info = InfoFor(details)
+  if not info then return info end
+  if not ns.IsGear(info) then return false end
+  local up, uncertain, soon = ns.IsUpgrade(info)
+  if not (up or soon) then return false end
+  f.arrow:Look((not up and "soon") or (uncertain and true or false))
+  return true
+end
+
 -- Upgrade plugin: Baganator passes the item link (a table with itemLink is accepted too).
 local function UpgradeCheck(arg)
   if not On() then return false end
@@ -154,7 +179,9 @@ local function SetupBaganator()
       ns.Guard("baganator:level", LevelUpdate), ns.Guard("baganator:init", LevelInit), { corner = "bottom_left", priority = 1 }, true)
     local ok2 = pcall(api.RegisterCornerWidget, L["Geardon: BoE"], "geardon_boe",
       ns.Guard("baganator:boe", BoEUpdate), ns.Guard("baganator:init", BoEInit), { corner = "top_right", priority = 2 }, true)
-    parts[#parts + 1] = "corners " .. (ok1 and "ok" or "failed") .. "/" .. (ok2 and "ok" or "failed")
+    local ok3 = pcall(api.RegisterCornerWidget, L["Geardon: upgrade arrow"], "geardon_upgrade",
+      ns.Guard("baganator:arrow", ArrowUpdate), ns.Guard("baganator:init", ArrowInit), { corner = "top_left", priority = 1 }, true)
+    parts[#parts + 1] = "corners " .. (ok1 and "ok" or "failed") .. "/" .. (ok2 and "ok" or "failed") .. "/" .. (ok3 and "ok" or "failed")
   else
     parts[#parts + 1] = "no corner widgets"
   end
