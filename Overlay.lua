@@ -10,6 +10,7 @@ local overlays = setmetatable({}, { __mode = "k" })
 local stats = { created = 0, shown = 0, skipped = 0 }
 ns.overlayStats = stats
 
+local ARROW_SIZE = 20
 local function SetArrow(tex)
   local ok, res = false, nil
   if tex.SetAtlas then ok, res = pcall(tex.SetAtlas, tex, "bags-greenarrow", false) end
@@ -38,10 +39,10 @@ local function ArrowLook(tex, check)
   end
 end
 
--- (1.7.1, 26.11.2026) the same arrow with a dark rim for other places (Baganator's corner, BagAddons.lua): returns a
--- holder with :Look(check) (check true: yellow, "soon": grey), :SetShown(on) and :SetPoint(...)
+-- (26.11.2026) the same arrow with its dark rim for other places (the auction house rows, AuctionHouse.lua):
+-- returns a holder with :Look(upgrade, check) (check true: yellow, "soon": grey) and :SetShown(on)
 function ns.NewArrow(parent, size)
-  size = size or 14
+  size = size or ARROW_SIZE
   local h = {}
   h.back = parent:CreateTexture(nil, "OVERLAY", nil, 1)
   h.back:SetSize(size + 4, size + 4)
@@ -114,9 +115,18 @@ local function Get(button)
   if level then o:SetFrameLevel(level + 4) end
   o.text = o:CreateFontString(nil, "OVERLAY", "NumberFontNormal")
   o.text:SetJustifyH("CENTER")
-  o.arrow = o:CreateTexture(nil, "OVERLAY")
-  o.arrow:SetSize(14, 14)
-  o.arrow:SetPoint("TOPLEFT", o, "TOPLEFT", 1, -1)
+  -- (26.11.2026, Daniel: "ein klarer pfeil", gewählt "Größer mit Rand") 20 instead of 14 pixels, with the same arrow in
+  -- black a little larger behind it as a dark rim, so it stands out on light icons too
+  o.arrowBack = o:CreateTexture(nil, "OVERLAY", nil, 1)
+  o.arrowBack:SetSize(ARROW_SIZE + 4, ARROW_SIZE + 4)
+  o.arrowBack:SetPoint("TOPLEFT", o, "TOPLEFT", -1, 1)
+  SetArrow(o.arrowBack)
+  if o.arrowBack.SetDesaturated then pcall(o.arrowBack.SetDesaturated, o.arrowBack, true) end
+  o.arrowBack:SetVertexColor(0, 0, 0, 0.9)
+  o.arrowBack:Hide()
+  o.arrow = o:CreateTexture(nil, "OVERLAY", nil, 2)
+  o.arrow:SetSize(ARROW_SIZE, ARROW_SIZE)
+  o.arrow:SetPoint("CENTER", o.arrowBack, "CENTER", 0, 0)
   SetArrow(o.arrow)
   o.arrow:Hide()
   overlays[button] = o
@@ -189,6 +199,7 @@ function ns.ShowLevel(button, level, quality, opts)
   local arrow = level and opts and (opts.upgrade or opts.soon) and ns.db and ns.db.upgradeArrow and true or false
   if arrow then ArrowLook(o.arrow, (not opts.upgrade and "soon") or (opts.check and true or false)) end
   o.arrow:SetShown(arrow)
+  if o.arrowBack then o.arrowBack:SetShown(arrow) end
   SetBoE(o, boe and true or false)
   if not o:IsShown() then o:Show() end
   o._on = true

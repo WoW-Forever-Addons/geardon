@@ -68,6 +68,14 @@ function ns.DiagLines()
   end
   out[#out + 1] = "equipped: " .. (#eqParts > 0 and table.concat(eqParts, " ") or "nothing")
   out[#out + 1] = "slot ids: ranged " .. tostring(ns.SLOT.RangedSlot) .. ", tabard " .. tostring(ns.SLOT.TabardSlot)
+  -- (26.11.2026) DonData's gear value: spec, damage, hit as the game counts it against the worn items' hit, caps
+  local dd = rawget(_G, "DonDataAPI")
+  if type(dd) == "table" and type(dd.GearDiag) == "function" then
+    local ok, lines = pcall(dd.GearDiag)
+    if ok and type(lines) == "table" then for _, l in ipairs(lines) do out[#out + 1] = tostring(l) end end
+  end
+  local spec = ns.StatWeightsSpecText and ns.StatWeightsSpecText()
+  if spec then out[#out + 1] = spec end
 
   local n, on = ns.CountOverlays()
   out[#out + 1] = ("overlays: %d, showing %d; %s"):format(n, on, Kv(ns.overlayStats))

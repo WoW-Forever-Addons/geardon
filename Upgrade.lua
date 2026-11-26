@@ -417,23 +417,28 @@ local function Replaced(info, slot)
   local e = eq[slot or ""]
   return e and e.link or nil
 end
+-- (26.11.2026) the new item's value as DonData's comparison takes it (its gain over what it replaces): its hit counts
+-- against your hit without the replaced item, as in GearCompare, so the tooltip's percent and the arrow agree
 local function SharedValues(api, info, slot)
-  local new = api.GearValue(info.link)
-  if not new then return nil end
   local r = Replaced(info, slot)
-  if r == nil then return new, 0 end
+  local old = 0
   if type(r) == "string" then
-    local old = api.GearValue(r)
+    old = api.GearValue(r)
     if not old then return nil end
+  elseif type(r) == "table" then
+    for _, link in ipairs(r) do
+      local v = api.GearValue(link)
+      if not v then return nil end
+      old = old + v
+    end
+  end
+  local ok, sign, gain = pcall(api.GearCompare, info.link, r)
+  if not ok or sign == nil or type(gain) ~= "number" then
+    local new = api.GearValue(info.link)
+    if not new then return nil end
     return new, old
   end
-  local old = 0
-  for _, link in ipairs(r) do
-    local v = api.GearValue(link)
-    if not v then return nil end
-    old = old + v
-  end
-  return new, old
+  return old + gain, old
 end
 
 -- (Kritikrunde) of the two slots a ring, trinket or (dual wield) one-hand weapon may go to, the one whose item is worth

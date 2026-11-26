@@ -38,6 +38,36 @@ end)
 ns.On("LOOT_SLOT_CLEARED", function() ns.Dirty("loot") end)
 
 ---------------------------------------------------------------------------
+-- (26.11.2026, Daniel: "das gleiche, wenn ein item droppt zum rollen") Group loot rolls: Blizzard's GroupLootFrame1 to 4
+-- (Need, Greed, Pass); the arrow and item level on the item's icon (IconFrame), the roll's item by frame.rollID. The
+-- tooltip on that icon is GameTooltip, so the verdict with its percent shows there as everywhere (Tooltip.lua).
+---------------------------------------------------------------------------
+stats.rollUpdates, stats.rollItems = 0, 0
+local function UpdateRoll(frame)
+  stats.rollUpdates = stats.rollUpdates + 1
+  local button = rawget(frame, "IconFrame")
+  if type(button) ~= "table" then return end
+  local roll = ns.Num(rawget(frame, "rollID"))
+  local link = ns.db.showLoot and roll and ns.Method(frame, "IsShown") and ns.Str(ns.Call(rawget(_G, "GetLootRollItemLink"), roll))
+  if ns.ShowItemLevel(button, link or nil, true, "other") == true then stats.rollItems = stats.rollItems + 1 end
+end
+
+ns.OnInit(function()
+  local n = 0
+  for i = 1, 4 do
+    local frame = ns.Frame("GroupLootFrame" .. i)
+    if frame then
+      n = n + 1
+      ns.Watch("roll" .. i, frame, function() UpdateRoll(frame) end, 0.5)
+    end
+  end
+  stats.rolls = n
+end)
+for _, e in ipairs({ "START_LOOT_ROLL", "CANCEL_LOOT_ROLL", "CANCEL_ALL_LOOT_ROLLS" }) do
+  ns.On(e, function() for i = 1, 4 do ns.Dirty("roll" .. i) end end)
+end
+
+---------------------------------------------------------------------------
 -- Quest rewards: quest giver window (QuestInfoRewardsFrame) and the quest
 -- details in the map (MapQuestInfoRewardsFrame).
 ---------------------------------------------------------------------------

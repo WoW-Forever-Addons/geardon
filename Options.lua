@@ -92,6 +92,8 @@ local PAGES = {
     { key = "showLoot", name = "Loot window", tip = "Item level on loot, before you take it.", onChange = Refresh },
     { key = "showFlyout", name = "Equipment flyout", tip = "Item level on the items you can put in a slot, in the flyout of the character frame (hold Alt over a slot). Blizzard marks upgrades there itself.", parent = "showCharacter", onChange = Refresh },
     { key = "showMerchant", name = "Merchant", tip = "Item level and upgrade arrow on gear a merchant sells and in the buyback tab.", onChange = Refresh },
+    -- (26.11.2026, Daniel: im AH "mit einem Blick, wie viel Prozent das Item denn besser ist") AuctionHouse.lua
+    { key = "showAuction", name = "Auction house", tip = "In the auction house lists: the upgrade arrow on gear and how many percent better or worse it is than what you wear in that slot.", onChange = Refresh },
     { key = "showRewards", name = "Quest rewards", tip = "Item level on quest rewards, at the quest giver and in the quest details of the map.", onChange = Refresh },
     { header = "Chat" },
     { key = "chatChange", name = "Chat: item level changes", tip = "One line in the chat when your average changes, with the slots that changed, e.g. Item level 24.3 -> 25.1 (Head +6). Not on login; quick swaps make one line.", onChange = Refresh },
@@ -134,6 +136,8 @@ local PAGES = {
     { key = "arrowStatValue", name = "By stat value for your class", tip = "Weighs the stats for your class and talent tree, the same way as Questdon's reward suggestion: an item gets the arrow when it is worth more to you than your item, also at a lower item level, and none when it is worth less. With DonData the armor and the weapon DPS count as well (wands by their DPS first, ranged weapons of classes other than hunters by their stats, the item level only when all else is alike). Without DonData armor, rings, necks, trinkets and the weapons of casters go by their stats, other weapons, ranged weapons and wands by item level.", onChange = Refresh },
     { key = "arrowPair", name = "One-hand pair vs. two-hand", tip = "While you wear a two-hand weapon, a one-hand weapon together with the best shield or off-hand item from your bags (or the other way round) gets a yellow arrow when both hands together are higher. The tooltip names the partner.", onChange = Refresh },
   } },
+  -- (26.11.2026, Daniel: stat weights "in den optionen einstellbar ... ähnlich wie bei pawn") StatWeights.lua
+  ns.StatWeightPage(),
   { title = "Tooltips", tip = "Item level and comparison in item and player tooltips.", items = {
     { header = "Items" },
     { key = "tooltipLevel", name = "Item level line", tip = "Adds Item level 18 to item tooltips, only when the game's tooltip has no item level line of its own.", onChange = Refresh },
@@ -165,6 +169,8 @@ local function Status()
   if e and e.level then
     lines[#lines + 1] = L["Weakest slot: %s (%s)"]:format(ns.SlotLabel(weak), ns.FormatLevel(e.level))
   end
+  local spec = ns.StatWeightsSpecText and ns.StatWeightsSpecText()
+  if spec then lines[#lines + 1] = spec end
   local behind = ns.BehindSlots and ns.BehindLimit() and #(ns.BehindSlots()) or 0
   if behind > 0 then lines[#lines + 1] = L["Slots behind your level: %d"]:format(behind) end
   return lines

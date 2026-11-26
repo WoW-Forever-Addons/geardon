@@ -515,7 +515,9 @@ function Compute(info, v)
     v.block = "weapon"
   elseif ns.ArmorTypeOK and not ns.ArmorTypeOK(info) then
     v.block = "armor"
-  elseif ns.MainStatsOK and ns.MainStatsOK(info) == false then
+  -- (26.11.2026, Daniel: the arrow "nur nach Wert") an item DonData values higher keeps its arrow without your main
+  -- stats (its hit, crit, spell power or healing are in the value)
+  elseif ns.MainStatsOK and not (sc == 1 and ns.SharedGear and ns.SharedGear()) and ns.MainStatsOK(info) == false then
     v.block = "stats"
   elseif statsDown then
     v.block = "statvalue"
@@ -553,6 +555,26 @@ function ns.IsUpgrade(info)
     return true, true
   end
   return true, false
+end
+
+-- (26.11.2026, Daniel: im AH "mit einem Blick, wie viel Prozent das Item denn besser ist als das jetzige getragene") How much
+-- better than what you wear in its slot, as the tooltip's verdict says it: percent (whole number; nil when it goes by item
+-- level or a value is unknown), then the arrow (upgrade, uncertain, soon) and whether you can wear it at all and whether
+-- the slot is empty. Rings, trinkets and one-hand weapons against the weaker of your two, as everywhere.
+local pctScratch = {}
+function ns.UpgradePercent(info)
+  local v = ns.Judge(info, pctScratch)
+  if not v then return nil end
+  local wearable = not (v.block == "wear" or v.block == "weapon" or v.block == "armor" or (v.block == "level" and not v.soon))
+  local up, uncertain, soon = ns.IsUpgrade(info)
+  local eq = v.slot and ns.Equipped()[v.slot]
+  if not eq then return nil, up, uncertain, wearable, true, soon end
+  local pct
+  if not v.byLevel and ns.StatValues and (not ns.db or ns.db.arrowStatValue ~= false) then
+    local worth, worthOld = ns.StatValues(info, v.slot)
+    if worth and worthOld and worthOld > 0 then pct = math.floor((worth - worthOld) / worthOld * 100 + 0.5) end
+  end
+  return pct, up, uncertain, wearable, false, soon
 end
 
 -- Decimal separator of the client (Blizzard's DECIMAL_SEPERATOR: comma in deDE, frFR, esES, ptBR, ruRU).

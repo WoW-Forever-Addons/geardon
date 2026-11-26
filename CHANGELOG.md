@@ -1,5 +1,13 @@
 # Changes
 
+## 1.8.0
+
+- **Upgrades for your spec:** the comparison weighs every stat for your class and talent tree, including hit, crit, spell power and the defensive stats. Hit stops counting once you reach the cap.
+- **Stat weights like Pawn:** a new options page with a slider per stat for the spec you play, starting from the guides' values, saved per class and talent tree, with a button back to the guides.
+- **Auction house at a glance:** in the game's auction lists every gear line shows the upgrade arrow and how much better it is, like "+12%" in green or "-5%" in red.
+- **Arrow in loot rolls:** the upgrade arrow also shows in the group loot roll window. The arrow is larger and has a dark edge.
+- New files: restart the game once after updating.
+
 ## 1.7.1
 
 - **Upgrade arrow in Baganator:** Baganator does not draw an upgrade arrow on its icons by itself, so upgrades in Baganator's bags had none. Geardon now adds its own arrow there (the same as in the game's bags), top left; Baganator puts it in place by itself.
