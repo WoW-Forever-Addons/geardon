@@ -1,5 +1,9 @@
 # Changes
 
+## 1.8.1
+
+- **Auction house:** the percent now sits at the end of the item name instead of on the price, and the upgrade arrow is back on the item icon.
+
 ## 1.8.0
 
 - **Upgrades for your spec:** the comparison weighs every stat for your class and talent tree, including hit, crit, spell power and the defensive stats. Hit stops counting once you reach the cap.

@@ -82,12 +82,16 @@ local function Verdict(link)
   return text, r, g, b, arrow, (not up and soon and "soon") or (uncertain and true or false)
 end
 
--- the icon and the name cell of a row, where Blizzard's cell has them
+-- the name cell of a row and its icon: the cell that has an icon (28.11.2026, Daniel with a picture: the first cell is
+-- the price column in Blizzard's browse list, the percent sat on the price and the arrow found no icon)
 local function Cells(row)
   local cells = rawget(row, "cells")
-  local first = type(cells) == "table" and cells[1] or nil
-  local icon = first and (rawget(first, "Icon") or rawget(first, "icon"))
-  return first, icon
+  if type(cells) ~= "table" then return nil, nil end
+  for _, cell in ipairs(cells) do
+    local icon = type(cell) == "table" and (rawget(cell, "Icon") or rawget(cell, "icon"))
+    if icon then return cell, icon end
+  end
+  return nil, nil
 end
 
 local function UpdateRow(row)
@@ -107,7 +111,7 @@ local function UpdateRow(row)
   m = m or Mark(row)
   local first, icon = Cells(row)
   m.text:ClearAllPoints()
-  if first then m.text:SetPoint("RIGHT", first, "RIGHT", -4, 0) else m.text:SetPoint("LEFT", row, "LEFT", 190, 0) end
+  if first then m.text:SetPoint("RIGHT", first, "RIGHT", -4, 0) else m.text:SetPoint("RIGHT", row, "RIGHT", -60, 0) end
   m.text:SetText(text or "")
   m.text:SetTextColor(r or 1, g or 1, b or 1)
   if arrow then
